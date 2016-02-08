@@ -11,6 +11,11 @@
             <artifactId>vertx-web</artifactId>
             <version>3.2.0</version>
         </dependency>
+        <dependency>
+        	<groupId>io.vertx</groupId>
+        	<artifactId>vertx-auth-common</artifactId>
+        	<version>3.2.0</version>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
