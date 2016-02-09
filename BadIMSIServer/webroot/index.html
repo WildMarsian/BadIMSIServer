@@ -65,7 +65,7 @@
         <div class="jumbotron">
 
             <h1>Enter into the Matrix</h1>
-                <form class="form-horizontal">
+                <form action="/loginhandler" method="post" class="form-horizontal">
                         <fieldset>
                             <h2>Login</h2>
                             <hr>
@@ -73,13 +73,13 @@
                             <div class="form-group">
                                 <label for="inputEmail" class="col-lg-2 control-label">Email</label>
                                 <div class="col-lg-10">
-                                    <input class="form-control" id="inputEmail" placeholder="Email" type="text">
+                                    <input class="form-control" name="username" id="inputEmail" placeholder="Email" type="text">
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="inputPassword" class="col-lg-2 control-label">Password</label>
                                 <div class="col-lg-10">
-                                    <input class="form-control" id="inputPassword" placeholder="Password" type="password">
+                                    <input class="form-control" name="password" id="inputPassword" placeholder="Password" type="password">
                                 </div>
                             </div>
                             <div class="form-group">
