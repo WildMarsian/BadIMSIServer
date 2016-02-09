@@ -73,8 +73,6 @@ public class BadIMSIService extends AbstractVerticle {
             	.encode());
     	});    	
     	
-    	/*
-    	
 		// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
 		router.route().handler(BodyHandler.create());
@@ -99,7 +97,6 @@ public class BadIMSIService extends AbstractVerticle {
 			context.response().putHeader("location", "/").setStatusCode(302).end();
 		});
 		
-		*/
 		
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
