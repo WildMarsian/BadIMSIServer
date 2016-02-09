@@ -21,6 +21,14 @@ public class BadIMSIService extends AbstractVerticle {
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
+		       
+    	router.get("/master/session/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("Master session state", name).encode());
+    	});
 		
 		// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
@@ -42,7 +50,6 @@ public class BadIMSIService extends AbstractVerticle {
 		
 		router.route("/logout").handler(context -> {
 			context.clearUser();
-			
 			context.response().putHeader("location", "/").setStatusCode(302).end();
 		});
 		
