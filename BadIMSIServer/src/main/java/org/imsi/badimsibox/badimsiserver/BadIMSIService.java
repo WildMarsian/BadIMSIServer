@@ -32,7 +32,39 @@ public class BadIMSIService extends AbstractVerticle {
             	.put("taggle", "finkel") // in the js, object.taggle -> finkel
             	.encode());
     	});
-		
+    	
+    	
+    	router.get("/master/map/:locate").handler(rc -> {
+    		String name = "48.839915,2.5842899,17z";
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("location", name)
+            	.encode());
+    	});
+    	
+    	router.get("/master/sniffing/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
+
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.encode());
+    	});
+    	
+    	router.get("/master/jamming/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
+
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.encode());
+    	});
+    	
+    	
+    	/*
     	
 		// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
@@ -58,6 +90,7 @@ public class BadIMSIService extends AbstractVerticle {
 			context.response().putHeader("location", "/").setStatusCode(302).end();
 		});
 		
+		*/
 		
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);

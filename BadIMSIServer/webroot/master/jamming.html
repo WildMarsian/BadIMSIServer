@@ -20,6 +20,20 @@
         display: block;
     }
     </style>
+    <script type="text/javascript">
+
+        function stopSession() {
+          $.get('/master/session/stop', function(object){
+              alert(object.state);
+          });
+        }
+
+        function stopJamming() {
+          $.get('/master/jamming/stop', function(object){
+              alert('Jamming state: '+object.state);
+          });
+        }        
+    </script>
   </head>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
@@ -43,7 +57,7 @@
               </a>
               <ul  class="dropdown-menu"  role="menu">
                 <li><a  href="#">Edit profile</a></li>
-                <li><a  href="#">Log out</a></li>
+                <li><a href="#" id="logout" onclick="stopJamming(); return false;">Log out</a></li>
               </ul>
             </li>
           </ul>
@@ -90,6 +104,7 @@
                 </div>
                 <div  class="form-group">
                   <div> <a  href="#"  class="btn btn-primary">Clone</a> </div>
+                  <div> <a  href="#" id="create" onclick="stopJamming(); return false;" class="btn btn-danger">Stop</a> </div>
                 </div>
               </form>
             </div>

@@ -33,8 +33,23 @@
         height: 100% !important;
     }
     </style>
+    
+    <script type="text/javascript">
+        function locate() {
+          $.get('/master/map/locate', function(object){
+              alert('location: '+object.location);
+          });
+        }
+        
+        function stopSession() {
+          $.get('/master/session/stop', function(object){
+              alert(object.state);
+          });
+        }
+    </script>
+    
   </head>
-  <body>
+  <body onload="locate()">
     <nav  class="navbar navbar-default navbar-static-top">
       <div  class="container">
         <div  class="navbar-header"> <button  type="button"  class="navbar-toggle collapsed"
@@ -56,7 +71,7 @@
               </a>
               <ul  class="dropdown-menu"  role="menu">
                 <li><a  href="#">Edit profile</a></li>
-                <li><a  href="#">Log out</a></li>
+                <li><a  href="#" id="logout" onclick="stopSession(); return false;">Log out</a></li>
               </ul>
             </li>
           </ul>

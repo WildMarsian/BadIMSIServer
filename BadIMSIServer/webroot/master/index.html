@@ -22,6 +22,7 @@
     </style>
 
     <script type="text/javascript">
+        
         function createPassword() {
           console.log("inside create");
           alert("inside create");
@@ -29,8 +30,8 @@
 
         function startSession() {
           $.get('/master/session/start', function(object){
-              alert(object.state);
-              alert(object.taggle);
+              alert('Session state: '+object.state);
+              window.location.href = '/master/location.html';
           });
         }
 
@@ -109,7 +110,7 @@
                     <a href="#" id="create" onclick="createPassword(); return false;" class="btn btn-primary">
                       Create
                     </a>
-                    <a href="#" id="go" onclick="startSession(); return false;" class="btn btn-success">
+                    <a href="./location.html" id="go" onclick="startSession(); return false;" class="btn btn-success">
                       Go
                     </a>
                 </div>
