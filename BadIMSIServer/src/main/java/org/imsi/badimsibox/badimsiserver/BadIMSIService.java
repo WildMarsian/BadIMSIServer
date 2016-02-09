@@ -36,9 +36,9 @@ public class BadIMSIService extends AbstractVerticle {
 		router.route("/master/*").handler(RedirectAuthHandler.create(authProvider, "/index.html"));
 
 		// Creating the static route towards the webroot folder
-		router.route("/master/*").handler(StaticHandler.create().setCachingEnabled(false).setWebRoot("webroot"));
+		router.route("/master/*").handler(StaticHandler.create().setCachingEnabled(false).setWebRoot("webroot/master"));
 		
-		router.route("/loginhandler").handler(FormLoginHandler.create(authProvider));
+		router.route("/loginhandler").handler(FormLoginHandler.create(authProvider, "username", "password", "/index.html", "/master/index.html"));
 		
 		router.route("/logout").handler(context -> {
 			context.clearUser();
