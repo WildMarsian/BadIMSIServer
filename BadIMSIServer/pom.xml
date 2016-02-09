@@ -26,6 +26,11 @@
         	<artifactId>slf4j-log4j12</artifactId>
         	<version>1.7.13</version>
         </dependency>
+        <dependency>
+        	<groupId>io.vertx</groupId>
+        	<artifactId>vertx-web-templ-mvel</artifactId>
+        	<version>3.2.0</version>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
