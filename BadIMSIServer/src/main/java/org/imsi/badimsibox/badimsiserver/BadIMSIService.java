@@ -69,6 +69,16 @@ public class BadIMSIService extends AbstractVerticle {
             	.encode());
     	});
     	
+    	router.get("/master/fakebts/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
+    		
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.encode());
+    	});
+    	
 		// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
 		router.route().handler(BodyHandler.create());
