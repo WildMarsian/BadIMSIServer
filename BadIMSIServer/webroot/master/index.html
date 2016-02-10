@@ -20,6 +20,29 @@
         display: block;
     }
     </style>
+
+    <script type="text/javascript">
+        
+        function createPassword() {
+          console.log("inside create");
+          alert("inside create");
+        }
+
+        function startSession() {
+          $.get('/master/session/start', function(object){
+              alert('Session state: '+object.state);
+              window.location.href = '/master/location.html';
+          });
+        }
+
+        function stopSession() {
+          $.get('/master/session/stop', function(object){
+              alert(object.state);
+          });
+        }
+
+    </script>
+
   </head>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
@@ -43,7 +66,7 @@
                 </a>
               <ul class="dropdown-menu" role="menu">
                 <li><a  href="#">Edit profile</a></li>
-                <li><a  href="#">Log out</a></li>
+                <li><a  href="#" id="logout" onclick="stopSession(); return false;">Log out</a></li>
               </ul>
             </li>
           </ul>
@@ -73,7 +96,7 @@
               <h3  class="panel-title">Create a new password for your Observers</h3>
             </div>
             <div  class="panel-footer">
-              <form  class="bs-component">
+              <form class="bs-component">
                 <div  class="form-group"> <label  class="control-label"  for="login">Login:
                     GROUP-BADIS</label> </div>
                 <div  class="form-group"> <label  class="control-label"  for="login">Current
@@ -83,9 +106,13 @@
 
                      value="Enter a password"  type="text"> </div>
                 <div  class="form-group">
-                  <div> <a  href="#"  class="btn btn-primary">Create</a> <a  href="./location.html"
-
-                       class="btn btn-success">GO</a> </div>
+                  <div>
+                    <a href="#" id="create" onclick="createPassword(); return false;" class="btn btn-primary">
+                      Create
+                    </a>
+                    <a href="./location.html" id="go" onclick="startSession(); return false;" class="btn btn-success">
+                      Go
+                    </a>
                 </div>
               </form>
             </div>

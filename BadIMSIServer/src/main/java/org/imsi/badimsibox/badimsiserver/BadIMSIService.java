@@ -29,18 +29,46 @@ public class BadIMSIService extends AbstractVerticle {
 		TemplateManager.setRouter(router);
 
 		router.get("/master/session/:state").handler(rc -> {
-			String name = rc.request().getParam("state");
+    		String name = rc.request().getParam("state");
 
-			// We have to give the right response
-			rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", name).put("taggle", "finkel") // in
-																																		// the
-																																		// js,
-																																		// object.taggle
-																																		// ->
-																																		// finkel
-					.encode());
-		});
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.put("taggle", "finkel") // in the js, object.taggle -> finkel
+            	.encode());
+    	});
+    	
+    	
+    	router.get("/master/map/:locate").handler(rc -> {
+    		String name = "48.839915,2.5842899,17z";
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("location", name)
+            	.encode());
+    	});
+    	
+    	router.get("/master/sniffing/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
 
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.encode());
+    	});
+    	
+    	router.get("/master/jamming/:state").handler(rc -> {
+    		String name = rc.request().getParam("state");
+
+    		// We have to give the right response
+    		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", name)
+            	.encode());
+    	});
+    	
 		// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
 		router.route().handler(BodyHandler.create());

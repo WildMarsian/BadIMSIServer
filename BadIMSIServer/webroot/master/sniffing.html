@@ -20,6 +20,22 @@
         display: block;
     }
     </style>
+    
+    <script type="text/javascript">
+
+        function stopSession() {
+          $.get('/master/session/stop', function(object){
+              alert(object.state);
+          });
+        }
+
+        function stopSniffing() {
+          $.get('/master/sniffing/stop', function(object){
+              alert('Sniffing state: '+object.state);
+          });
+        }        
+    </script>
+    
   </head>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
@@ -43,7 +59,7 @@
               </a>
               <ul  class="dropdown-menu"  role="menu">
                 <li><a  href="#">Edit profile</a></li>
-                <li><a  href="#">Log out</a></li>
+                <li><a  href="#" id="logout" onclick="stopSession(); return false;">Log out</a></li>
               </ul>
             </li>
           </ul>
