@@ -17,8 +17,7 @@ public class PythonCaller {
 	
 	private static String contextPath = "/opt/badimsicore/";
 	
-    private final String program = "python";
-    private final String[] scriptPath;  
+    private final String program = "python"; 
     private final String cmd;
     private final StringBuilder resultSb = new StringBuilder();
 
@@ -27,7 +26,7 @@ public class PythonCaller {
         	throw new IllegalArgumentException("No args found");
         }
     	
-    	this.scriptPath = Objects.requireNonNull(scriptPath);  
+    	Objects.requireNonNull(scriptPath);  
     	StringBuilder sb = new StringBuilder();
         sb.append(program);
         for (String string : scriptPath) {
