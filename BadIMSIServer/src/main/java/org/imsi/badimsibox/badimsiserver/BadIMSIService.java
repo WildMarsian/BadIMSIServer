@@ -29,6 +29,7 @@ public class BadIMSIService extends AbstractVerticle {
             	.encode());
     	});  	
     	
+		
 		router.get("/master/map/:locate").handler(rc -> {	
     		// Actually, this is an example: Remove me when you put the right code
 			String name = "48.839915,2.5842899,17z";
@@ -37,7 +38,7 @@ public class BadIMSIService extends AbstractVerticle {
             	.end(new JsonObject().put("location", name)
             	.encode());
 		
-			/*	
+			/*
 			// Example to call python files from Java
 			String[] pythonLocationScript = {"/path/to/script/python/locate_me.py","-i","input","-o", "output"};
     		PythonCaller pc = new PythonCaller(pythonLocationScript);
