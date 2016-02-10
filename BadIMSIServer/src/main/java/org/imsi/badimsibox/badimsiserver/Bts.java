@@ -27,5 +27,4 @@ public class Bts {
 	public String toString() {
 		return this.operator+" "+this.lac+" "+this.ci+" "+this.arfcn;
 	}
-	
 }
