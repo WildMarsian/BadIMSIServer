@@ -21,20 +21,19 @@ public class BadIMSIService extends AbstractVerticle {
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
-		       
-    	router.get("/master/session/:state").handler(rc -> {
+		
+		router.get("/master/session/:state").handler(rc -> {
     		String name = rc.request().getParam("state");
 
     		// We have to give the right response
     		rc.response()
             	.putHeader("content-type", "application/json")
             	.end(new JsonObject().put("state", name)
-            	.put("taggle", "finkel") // in the js, object.taggle -> finkel
+            	.put("key", "value") // in the js, object.key -> value
             	.encode());
-    	});
+    	});  	
     	
-    	
-    	router.get("/master/map/:locate").handler(rc -> {
+		router.get("/master/map/:locate").handler(rc -> {
     		String name = "48.839915,2.5842899,17z";
     		// We have to give the right response
     		rc.response()
@@ -71,14 +70,15 @@ public class BadIMSIService extends AbstractVerticle {
             	.putHeader("content-type", "application/json")
             	.end(new JsonObject().put("state", name)
             	.encode());
-    	});    	
-    	
-		// Let's set up the cookies, request bodies and sessions
+    	});
+		
+		
+    	/* 
+    	// Let's set up the cookies, request bodies and sessions
 		router.route().handler(CookieHandler.create());
 		router.route().handler(BodyHandler.create());
 		router.route().handler(SessionHandler.create(LocalSessionStore.create(vertx)));
-		
-		
+	
 		// Simple auth using properties file for user/role info
 		AuthProvider authProvider = ShiroAuth.create(vertx, ShiroAuthRealmType.PROPERTIES, new JsonObject().put(PropertiesProviderConstants.PROPERTIES_PROPS_PATH_FIELD, "classpath:auth.properties"));
 		
@@ -96,7 +96,7 @@ public class BadIMSIService extends AbstractVerticle {
 			context.clearUser();
 			context.response().putHeader("location", "/").setStatusCode(302).end();
 		});
-		
+		*/
 		
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
