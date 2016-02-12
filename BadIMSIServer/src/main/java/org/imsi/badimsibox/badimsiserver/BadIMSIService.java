@@ -16,9 +16,7 @@ public class BadIMSIService extends AbstractVerticle {
 	
 	static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
-    static String defaultIpAndPorts = "*"; 
-	
-    private final Map<String, String> params = new HashMap<String, String>();
+    static String defaultIpAndPorts = "*";
     
 	@Override
 	public void start() {
@@ -78,11 +76,9 @@ public class BadIMSIService extends AbstractVerticle {
     		*/
     	});
     
-
-		
-		// TODO : A finir cette tache
     	router.post("/master/sniffing/start/").handler(rc -> {
     		final JsonObject reqJson = new JsonObject();
+    		final Map<String, String> params = new HashMap<String, String>();
     		reqJson.put("state", "start");
     		
     		rc.request().bodyHandler(h -> {
@@ -227,14 +223,24 @@ public class BadIMSIService extends AbstractVerticle {
     		*/
     	});
 
-    	router.post("/master/fakebts/start/:bts").handler(rc -> {    		
-    		String bts = rc.request().getParam("bts");
-    		if(bts != null) {
-        		rc.response()
+    	router.post("/master/fakebts/start/").handler(rc -> {    		
+    		final JsonObject reqJson = new JsonObject();
+    		final Map<String, String> params = new HashMap<String, String>();
+    		reqJson.put("state", "start");
+    		
+    		rc.request().bodyHandler(h -> {
+    			parseJsonParams(params, reqJson, h);
+    			for (String key : params.keySet()) {
+    				reqJson.put(key, params.get(key));
+    				System.out.println(key+" "+params.get(key));
+    			}
+    			
+    			System.out.println(reqJson.toString());
+    			
+    			rc.response()
             	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("state", "start").put("BTS", bts)
-            	.encode());	
-    		}
+            	.end(reqJson.encode());
+    		});
     		/*
     		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","start"};
     		PythonCaller pc = new PythonCaller(pythonLocationScript);

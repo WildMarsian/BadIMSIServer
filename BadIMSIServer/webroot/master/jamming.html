@@ -41,10 +41,12 @@
         
         // We have to save the operator before
         function startJammingAndFakeBTS() {
-        	 var operator = document.getElementById('bts');
-             var value = operator.options[operator.selectedIndex].value;
-             $.post('/master/fakebts/start/'+value, function(object){
-            	 alert('Fake BTS state: '+object.state+ '\nBTS selected: '+object.BTS);
+        	 var bts = document.getElementById('bts');
+             var jsonResponse = {
+           		  'bts'		 : bts.options[bts.selectedIndex].value
+             }
+             $.post('/master/fakebts/start/', jsonResponse, function(data){
+            	 alert('Fake BTS state: '+data.state+ '\nBTS selected: '+data.bts);
              });
         }
     </script>
@@ -116,7 +118,7 @@
                   </div>
                 </div>
                 <div  class="form-group">
-                  <div> <a  href="#"  class="btn btn-primary" id="clone" onclick="startJammingAndFakeBTS(); return false;">Clone</a> <a  href="#" id="jam" onclick="stopJammingAndFakeBTS(); return false;" class="btn btn-danger">Stop</a> </div>
+                  <div> <a  href="#"  class="btn btn-primary" id="clone" onclick="startJammingAndFakeBTS();">Clone</a> <a  href="#" id="jam" onclick="stopJammingAndFakeBTS();" class="btn btn-danger">Stop</a> </div>
                 </div>
               </form>
             </div>

@@ -39,8 +39,7 @@
         function getSniffingInfo() {
           var operator = document.getElementById('operator');
           var jsonResponse = {
-        		  'operator' : operator.options[operator.selectedIndex].value,
-        		  'bts'		 : 'Hahahaha'
+        		  'operator' : operator.options[operator.selectedIndex].value
           }
           $.post('/master/sniffing/start/', jsonResponse, function(data) {
         	  alert('Sniffing: '+data.state+ '\nO: '+data.operator);
