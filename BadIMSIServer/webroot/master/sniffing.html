@@ -23,6 +23,7 @@
     
     <script type="text/javascript">
 
+        
         function stopSession() {
           $.get('/master/session/stop', function(object){
               alert(object.state);
@@ -32,6 +33,17 @@
         function stopSniffing() {
           $.get('/master/sniffing/stop', function(object){
               alert('Sniffing state: '+object.state);
+          });
+        }
+        
+        function getSniffingInfo() {
+          var operator = document.getElementById('operator');
+          var jsonResponse = {
+        		  'operator' : operator.options[operator.selectedIndex].value,
+        		  'bts'		 : 'Hahahaha'
+          }
+          $.post('/master/sniffing/start/', jsonResponse, function(data) {
+        	  alert('Sniffing: '+data.state+ '\nO: '+data.operator);
           });
         }        
     </script>
@@ -46,9 +58,7 @@
 
              aria-controls="navbar"> <span  class="sr-only">Toggle
               navigation</span> <span  class="icon-bar"></span> <span  class="icon-bar"></span>
-            <span  class="icon-bar"></span> </button> <a  class="navbar-brand"
-
-             href="#">BadIMSI Box</a> </div>
+            <span  class="icon-bar"></span> </button> <a  class="navbar-brand" href="#">BadIMSI Box</a> </div>
         <div  id="navbar"  class="navbar-collapse collapse">
           <ul  class="nav navbar-nav navbar-right">
             <li> <a  href="../readme.html">How to use</a> </li>
@@ -58,7 +68,7 @@
                  role="button"  aria-expanded="false">Hakim Badis<span  class="caret"></span>
               </a>
               <ul  class="dropdown-menu"  role="menu">
-                <li><a  href="#" id="logout" onclick="stopSession(); return false;">Log out</a></li>
+                <li><a  href="#" id="logout" onclick="stopSession();">Log out</a></li>
               </ul>
             </li>
           </ul>
@@ -94,16 +104,15 @@
                 <div  class="form-group"> <label  for="operator"  class="col-lg-2 control-label">Operator</label>
                   <div  class="col-lg-8">
                     <select  class="form-control"  id="operator">
-                      <option  selected="selected">NO</option>
-                      <option>Orange</option>
-                      <option>SFR</option>
-                      <option>Bouygues Télécom</option>
-                      <option>Free mobile</option>
+                      <option  selected="selected" value="NO">NO</option>
+                      <option value="Orange">Orange</option>
+                      <option value="SFR">SFR</option>
+                      <option value="Bouygues Telecom">Bouygues Télécom</option>
                     </select>
                   </div>
                 </div>
                 <div  class="form-group">
-                  <div> <a  href="#"  class="btn btn-primary">Scan</a> </div>
+                  <div> <a href="#" class="btn btn-primary" onclick="getSniffingInfo();">Scan</a> </div>
                 </div>
               </form>
             </div>
