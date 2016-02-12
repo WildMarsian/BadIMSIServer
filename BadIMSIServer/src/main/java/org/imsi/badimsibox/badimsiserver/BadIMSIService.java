@@ -7,9 +7,21 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
 
 public class BadIMSIService extends AbstractVerticle {
+	
+	static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
+    static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
+    static String defaultIpAndPorts = "*"; 
+	
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
+		
+		router.route().handler(rc -> {
+            rc.response().putHeader("Access-Control-Allow-Headers", defaultHeaders);
+            rc.response().putHeader("Access-Control-Allow-Methods", defaultMethods);
+            rc.response().putHeader("Access-Control-Allow-Origin", defaultIpAndPorts);
+            rc.next();
+         });
 		
 		router.get("/master/session/:state").handler(rc -> {
 			String name = rc.request().getParam("state");
