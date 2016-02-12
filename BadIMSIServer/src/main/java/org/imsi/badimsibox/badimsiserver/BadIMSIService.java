@@ -1,7 +1,13 @@
 package org.imsi.badimsibox.badimsiserver;
 
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -12,6 +18,8 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*"; 
 	
+    private final Map<String, String> params = new HashMap<String, String>();
+    
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
@@ -69,21 +77,26 @@ public class BadIMSIService extends AbstractVerticle {
     		}	
     		*/
     	});
-    	
+    
+
+		
 		// TODO : A finir cette tache
     	router.post("/master/sniffing/start/").handler(rc -> {
-    		final JsonObject reqJson = new JsonObject();    		
-    		rc.request().bodyHandler(h -> {
-    			
-    		});
-    		
+    		final JsonObject reqJson = new JsonObject();
     		reqJson.put("state", "start");
     		
-       		rc.response()
-        	.putHeader("content-type", "application/json")
-        	.end(reqJson.encode());
-
-    			/*
+    		rc.request().bodyHandler(h -> {
+    			parseJsonParams(params, reqJson, h);
+    			for (String key : params.keySet()) {
+    				reqJson.put(key, params.get(key));
+    			}
+    			
+    			rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(reqJson.encode());
+    		});
+    		
+    		/*
     			String data = rc.request().getFormAttribute("operator");
     			System.out.println(data);
     			System.out.println("Haha");
@@ -271,5 +284,20 @@ public class BadIMSIService extends AbstractVerticle {
 		
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
+	}
+
+	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
+		String[] paramSplits = h.toString().split("&");
+		String[] valueSplits;
+
+		if (paramSplits.length > 1) {
+		    for (String param : paramSplits) {
+		        valueSplits = param.split("=");
+		        if (valueSplits.length > 1) {
+		            // add this check to handle empty phone number fields
+		            params.put((valueSplits[0]),(valueSplits[1]));
+		        }
+		    }
+		}	
 	}
 }
