@@ -38,11 +38,11 @@
         
         function getSniffingInfo() {
           var operator = document.getElementById('operator');
-          var jsonResponse = {
+          var jsonRequest = {
         		  'operator' : operator.options[operator.selectedIndex].value
           }
-          $.post('/master/sniffing/start/', jsonResponse, function(data) {
-        	  alert('Sniffing: '+data.state+ '\nO: '+data.operator);
+          $.post('/master/sniffing/start/', jsonRequest, function(object) {
+        	  alert('Sniffing: '+object.state+ '\nO: '+object.operator);
           });
         }        
     </script>

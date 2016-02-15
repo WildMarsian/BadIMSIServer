@@ -2,9 +2,7 @@ package org.imsi.badimsibox.badimsiserver;
 
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
@@ -18,9 +16,25 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
     
+	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
+		String bufferMessage = h.toString();
+		
+		String[] paramSplits = bufferMessage.split("&");
+		String[] valueSplits;
+		
+		for (String param : paramSplits) {
+		        valueSplits = param.split("=");
+		        if (valueSplits.length > 1) {
+		            params.put((valueSplits[0]),(valueSplits[1]));
+		        }
+		}
+
+	}
+   
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
+		
 		
 		router.route().handler(rc -> {
             rc.response().putHeader("Access-Control-Allow-Headers", defaultHeaders);
@@ -77,15 +91,16 @@ public class BadIMSIService extends AbstractVerticle {
     	});
     
     	router.post("/master/sniffing/start/").handler(rc -> {
-    		final JsonObject reqJson = new JsonObject();
-    		final Map<String, String> params = new HashMap<String, String>();
-    		reqJson.put("state", "start");
+    		final JsonObject reqJson = new JsonObject();	
+    		final Map<String,String> params = new HashMap<>();
     		
     		rc.request().bodyHandler(h -> {
     			parseJsonParams(params, reqJson, h);
     			for (String key : params.keySet()) {
     				reqJson.put(key, params.get(key));
     			}
+    			
+    			reqJson.put("state", "start");
     			
     			rc.response()
             	.putHeader("content-type", "application/json")
@@ -226,21 +241,19 @@ public class BadIMSIService extends AbstractVerticle {
     	router.post("/master/fakebts/start/").handler(rc -> {    		
     		final JsonObject reqJson = new JsonObject();
     		final Map<String, String> params = new HashMap<String, String>();
-    		reqJson.put("state", "start");
     		
     		rc.request().bodyHandler(h -> {
-    			parseJsonParams(params, reqJson, h);
+    			parseJsonParams(params,reqJson, h);
     			for (String key : params.keySet()) {
     				reqJson.put(key, params.get(key));
-    				System.out.println(key+" "+params.get(key));
     			}
     			
-    			System.out.println(reqJson.toString());
-    			
+    			reqJson.put("state", "start");
     			rc.response()
             	.putHeader("content-type", "application/json")
             	.end(reqJson.encode());
     		});
+    		
     		/*
     		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","start"};
     		PythonCaller pc = new PythonCaller(pythonLocationScript);
@@ -287,23 +300,46 @@ public class BadIMSIService extends AbstractVerticle {
     		*/
     	});
 
-		
+
+    	router.post("/master/attack/sms/send/").handler(rc -> {    		
+    		// We have to give the right response
+    		final JsonObject reqJson = new JsonObject();	
+    		final Map<String,String> params = new HashMap<>();
+    		
+    		
+    		rc.request().bodyHandler(h -> {
+    			parseJsonParams(params, reqJson, h);
+    			for (String key : params.keySet()) {
+    				reqJson.put(key, params.get(key));
+    			}
+    			
+    			System.out.println(reqJson);
+    			
+    			rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(reqJson.encode());
+    		});
+    		
+    		/*
+    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","stop"};
+    		PythonCaller pc = new PythonCaller(pythonLocationScript);
+    		int exitValue = -1;
+    		try {
+				exitValue = pc.process();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+    		
+    		if(exitValue == 0) {
+        		rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("fake bts", pc.getResultSb())
+            	.encode());
+    		}	
+    		*/
+    	});
+    	
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
-	}
-
-	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
-		String[] paramSplits = h.toString().split("&");
-		String[] valueSplits;
-
-		if (paramSplits.length > 1) {
-		    for (String param : paramSplits) {
-		        valueSplits = param.split("=");
-		        if (valueSplits.length > 1) {
-		            // add this check to handle empty phone number fields
-		            params.put((valueSplits[0]),(valueSplits[1]));
-		        }
-		    }
-		}	
 	}
 }

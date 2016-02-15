@@ -31,7 +31,7 @@
         function startSession() {
           $.get('/master/session/start', function(object){
               alert('Session state: '+object.state);
-              window.location.href = '/master/location.html';
+              window.location.href = 'http://localhost:8080/master/location.html';
           });
         }
 

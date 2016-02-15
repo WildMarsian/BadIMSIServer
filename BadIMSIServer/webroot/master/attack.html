@@ -20,6 +20,20 @@
         display: block;
     }
     </style>
+    <script type="text/javascript">        
+        // We have to save the operator before
+        function sendSMSToCore() {
+        	 var sender = document.getElementById('sender').value;
+        	 var message = document.getElementById('message').value;
+             var jsonRequest = {
+           		  'sender'		 : sender,
+           		  'message'		 : message
+             }
+             $.post('/master/attack/sms/send/', jsonRequest, function(object){
+            	 alert('Sender: '+object.sender+ '\nMessage: '+object.message);
+             });
+        }
+    </script>
   </head>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
@@ -85,20 +99,14 @@
               <form  class="form-horizontal">
                 <fieldset>
                   <div  class="form-group"> <label  for="inputEmail"  class="col-lg-2 control-label">Sender</label>
-                    <div  class="col-lg-10"> <input  class="form-control"  id="inputSource"
-
-                         placeholder="Enter sender's number"  type="text"> </div>
+                    <div  class="col-lg-10"> <input  class="form-control"  id="sender" placeholder="Enter sender's number"  type="text"> </div>
                   </div>
                   <div  class="form-group"> <label  for="textArea"  class="col-lg-2 control-label">Message</label>
-                    <div  class="col-lg-10"> <textarea  class="form-control"  rows="6"
-
- id="textArea"></textarea> <span  class="help-block">The message body can be at
+                    <div  class="col-lg-10"> <textarea  class="form-control"  rows="6" id="message"></textarea> <span  class="help-block">The message body can be at
                         least 160 characters.</span> </div>
                   </div>
                   <div  class="form-group">
-                    <div  class="col-lg-10 col-lg-offset-2"> <button  type="submit"
-
-                         class="btn btn-primary">Send</button> </div>
+                    <div  class="col-lg-10 col-lg-offset-2"> <button  type="submit" onclick="sendSMSToCore();" class="btn btn-primary">Send</button> </div>
                   </div>
                 </fieldset>
               </form>
