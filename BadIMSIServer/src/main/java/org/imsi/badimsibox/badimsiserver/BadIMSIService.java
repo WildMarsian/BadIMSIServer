@@ -1,6 +1,7 @@
 package org.imsi.badimsibox.badimsiserver;
 
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +12,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
 
 public class BadIMSIService extends AbstractVerticle {
-	
+	private Session currentSession = Session.init();
 	static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
@@ -40,24 +41,48 @@ public class BadIMSIService extends AbstractVerticle {
             rc.next();
          });
 		
-		router.get("/master/session/:state").handler(rc -> {
-			String name = rc.request().getParam("state");
-    		if(name.equals("start")) {
-    			/* Code to start session */
-    		}
-    		
-    		if(name.equals("stop")) {
-    			/* Code to stop session */
-    		}
-    		
-    		// We have to give the right response
-    		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("state", name)
-            	.put("key", "value") // in the js, object.key -> value
-            	.encode());
-    	});  	
+		router.get("/master/session/start/:password").handler(rc -> {
+			String password = rc.request().getParam("password");
+			System.out.println(new Date() + ": Starting a session");
+			this.currentSession = new Session(password);
+			this.currentSession.updateTimestamp();
+			//this.currentSession.nextSessionState();
+			rc.response()
+					.putHeader("content-type", "application/json")
+					.end(new JsonObject().put("started", true).encode());
+			
+		});	
     	
+		router.get("/master/session/state").handler(rc -> {
+    		//String name = rc.request().getParam("state");
+    		
+    		if(this.currentSession == null) {
+    			rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", -1)
+            	.encode());
+    		} else {
+    			rc.response()
+            	.putHeader("content-type", "application/json")
+            	.end(new JsonObject().put("state", this.currentSession.getSessionState())
+            						 .put("password",this.currentSession.getPassword())
+            						 .put("timestamp", this.currentSession.getTimestamp())
+            	.encode());
+    		}
+    	});
+		
+		router.get("/master/session/set/state/:state").handler(rc -> {
+			String stateString = rc.request().getParam("state");
+			int stateInt = Integer.parseInt(stateString);
+			if((stateInt > -1) && (stateInt < 5) && (this.currentSession.getSessionState() < stateInt)) {
+				this.currentSession.nextSessionState();
+				rc.response().putHeader("content-type", "application/json")
+				.end(new JsonObject().put("stateChanged", true).encode());
+			} else {
+			rc.response().putHeader("content-type", "application/json")
+			.end(new JsonObject().put("stateChanged", false).encode());
+			}
+		});
 		
 		router.get("/master/map/:locate").handler(rc -> {	
     		// Actually, this is an example: Remove me when you put the right code
