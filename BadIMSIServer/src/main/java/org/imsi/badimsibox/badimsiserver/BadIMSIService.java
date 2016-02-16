@@ -17,25 +17,22 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultIpAndPorts = "*";
     
 	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
-		String bufferMessage = h.toString();
-		
+		String bufferMessage = h.toString();		
 		String[] paramSplits = bufferMessage.split("&");
 		String[] valueSplits;
 		
 		for (String param : paramSplits) {
 		        valueSplits = param.split("=");
 		        if (valueSplits.length > 1) {
-		            params.put((valueSplits[0]),(valueSplits[1]));
+		        	String msg = valueSplits[1].replace("+", " ");
+		            params.put((valueSplits[0]),msg);
 		        }
 		}
-
 	}
    
 	@Override
 	public void start() {
 		Router router = Router.router(vertx);
-		
-		
 		router.route().handler(rc -> {
             rc.response().putHeader("Access-Control-Allow-Headers", defaultHeaders);
             rc.response().putHeader("Access-Control-Allow-Methods", defaultMethods);
@@ -313,30 +310,38 @@ public class BadIMSIService extends AbstractVerticle {
     				reqJson.put(key, params.get(key));
     			}
     			
-    			System.out.println(reqJson);
+    			String sender = reqJson.getString("sender");
+    			String msg = reqJson.getString("message");
+    			
+        		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-s","#IMSI",sender, msg};
+        		
+        		for (String arg : pythonLocationScript) {
+        			System.out.print(arg+" ");
+				}
+        		
+        		/*
+        		PythonCaller pc = new PythonCaller(pythonLocationScript);
+        		int exitValue = -1;
+        		try {
+    				exitValue = pc.process();
+    			} catch (Exception e) {
+    				e.printStackTrace();
+    			}
+        		
+        		if(exitValue == 0) {
+            		rc.response()
+                	.putHeader("content-type", "application/json")
+                	.end(new JsonObject().put("Message sent", pc.getResultSb())
+                	.encode());
+        		}	
+    			
     			
     			rc.response()
             	.putHeader("content-type", "application/json")
             	.end(reqJson.encode());
+            	*/
     		});
-    		
-    		/*
-    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","stop"};
-    		PythonCaller pc = new PythonCaller(pythonLocationScript);
-    		int exitValue = -1;
-    		try {
-				exitValue = pc.process();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    		
-    		if(exitValue == 0) {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("fake bts", pc.getResultSb())
-            	.encode());
-    		}	
-    		*/
+
     	});
     	
 		router.route().handler(StaticHandler.create());
