@@ -27,6 +27,24 @@ public class Bts {
 		return operator.getNetworkName();
 	}
 	
+	
+	
+	public NetworkOperator getOperator() {
+		return operator;
+	}
+
+	public String getLac() {
+		return lac;
+	}
+
+	public String getCi() {
+		return ci;
+	}
+
+	public List<String> getArfcn() {
+		return arfcn;
+	}
+
 	@Override
 	public String toString() {
 		return this.operator+" "+this.lac+" "+this.ci+" "+this.arfcn;

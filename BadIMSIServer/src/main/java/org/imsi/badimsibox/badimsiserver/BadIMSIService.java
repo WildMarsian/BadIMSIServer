@@ -1,12 +1,15 @@
 package org.imsi.badimsibox.badimsiserver;
 
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -118,7 +121,7 @@ public class BadIMSIService extends AbstractVerticle {
     	router.post("/master/sniffing/start/").handler(rc -> {
     		final JsonObject reqJson = new JsonObject();	
     		final Map<String,String> params = new HashMap<>();
-    		
+    		/*
     		rc.request().bodyHandler(h -> {
     			parseJsonParams(params, reqJson, h);
     			for (String key : params.keySet()) {
@@ -131,18 +134,18 @@ public class BadIMSIService extends AbstractVerticle {
             	.putHeader("content-type", "application/json")
             	.end(reqJson.encode());
     		});
+    		*/
     		
-    		/*
-    			String data = rc.request().getFormAttribute("operator");
-    			System.out.println(data);
+    			//String data = rc.request().getFormAttribute("operator");
+    			//System.out.println(data);
     			System.out.println("Haha");
-           		*/
+           		
 
     			// get BTS Objects here
-    			/* .... */
+    			
     			
     			/* Mock datas */
-    			/*
+    			
     			List<Bts> bouyguesList = new ArrayList<>();
     			
     			List<String> arfcns = new ArrayList<>();
@@ -159,9 +162,28 @@ public class BadIMSIService extends AbstractVerticle {
     			bouyguesList.add(new Bts("20", "208", "54", "56243", arfcns2));
     			bouyguesList.add(new Bts("20", "208", "56", "56265", arfcns));
     			bouyguesList.add(new Bts("20", "208", "56", "56212", arfcns2));
-    			*/
-    		
-    		
+    			
+    			JsonArray array = new JsonArray();
+    			
+    			bouyguesList.forEach(item -> {
+    				JsonObject jsonObject = new JsonObject();
+    				jsonObject.put("Network", item.getOperatorByMnc());
+    				jsonObject.put("MCC", item.getOperator().getMcc());
+    				jsonObject.put("LAC", item.getLac());
+    				jsonObject.put("CI", item.getCi());
+    				StringBuilder sb = new StringBuilder();
+    				item.getArfcn().forEach(arfcn -> {
+    					sb.append(arfcn);
+    					sb.append(", ");
+    				});
+    				sb.delete(sb.length()-1	, sb.length());
+    				jsonObject.put("ARFCNs", sb.toString());
+    				array.add(jsonObject);
+    			});
+    			
+    			rc.response().putHeader("content-type", "application/json")
+    			.end(array.encode());
+    			    		
     		/*
     		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-l","start"};
     		PythonCaller pc = new PythonCaller(pythonLocationScript);
