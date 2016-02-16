@@ -13,6 +13,12 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class BadIMSIService extends AbstractVerticle {
 	private Session currentSession = Session.init();
@@ -114,55 +120,46 @@ public class BadIMSIService extends AbstractVerticle {
     		}	
     		*/
     	});
-    
+
     	router.post("/master/sniffing/start/").handler(rc -> {
     		final JsonObject reqJson = new JsonObject();	
     		final Map<String,String> params = new HashMap<>();
-    		/*
+    		
     		rc.request().bodyHandler(h -> {
     			parseJsonParams(params, reqJson, h);
+                        // Building the JSON on server side sent by client
     			for (String key : params.keySet()) {
     				reqJson.put(key, params.get(key));
     			}
-    			
-    			reqJson.put("state", "start");
-    			
-    			rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(reqJson.encode());
-    		});
-    		*/
-    		
-    			//String data = rc.request().getFormAttribute("operator");
-    			//System.out.println(data);
-    			System.out.println("Haha");
-           		
+                        
+    			// retrieving the operator name from HTML page
+                        String operator = reqJson.getString("operator");
+                        
+                        // Calling python script to launch the sniffing
+                        String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore-listen","-a",operator};
+                        PythonCaller pc = new PythonCaller(pythonLocationScript);
+                        
+                        // Building the answer
+                        List<Bts> operatorList = new ArrayList<>();
+                        
+                        try {
+                            // getting the sdtout of the python script
+                            Stream<String> streamBTS = (Stream<String>) pc.process().getInputStream();
+                            streamBTS.filter(line -> !line.startsWith("#")).map(line -> line.split(",")).forEach((tab) -> {
+                                // just to debug by display because WE ARE WARRIORS !!!!
+                                System.out.println("Line : " + tab);
+                                List<String> arfcns = new ArrayList<>(tab.length-4);
+                                for (int i = 4; i < tab.length; i++) {
+                                    arfcns.add(tab[i]);
+                                }
+                                operatorList.add(new Bts(tab[0], tab[1], tab[2], tab[3], arfcns));
+                            });
+                        } catch (IOException ex) {
+                            Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                        }
 
-    			// get BTS Objects here
-    			
-    			
-    			/* Mock datas */
-    			
-    			List<Bts> bouyguesList = new ArrayList<>();
-    			
-    			List<String> arfcns = new ArrayList<>();
-    			arfcns.add("702");
-    			arfcns.add("724");
-    			arfcns.add("751");
-    			
-    			List<String> arfcns2 = new ArrayList<>();
-    			arfcns2.add("980");
-    			arfcns2.add("998");
-    			arfcns2.add("1023");
-    			
-    			bouyguesList.add(new Bts("20", "208", "54", "56254", arfcns));
-    			bouyguesList.add(new Bts("20", "208", "54", "56243", arfcns2));
-    			bouyguesList.add(new Bts("20", "208", "56", "56265", arfcns));
-    			bouyguesList.add(new Bts("20", "208", "56", "56212", arfcns2));
-    			
     			JsonArray array = new JsonArray();
-    			
-    			bouyguesList.forEach(item -> {
+    			operatorList.forEach(item -> {
     				JsonObject jsonObject = new JsonObject();
     				jsonObject.put("Network", item.getOperatorByMnc());
     				jsonObject.put("MCC", item.getOperator().getMcc());
@@ -180,51 +177,7 @@ public class BadIMSIService extends AbstractVerticle {
     			
     			rc.response().putHeader("content-type", "application/json")
     			.end(array.encode());
-    			    		
-    		/*
-    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-l","start"};
-    		PythonCaller pc = new PythonCaller(pythonLocationScript);
-    		int exitValue = -1;
-    		try {
-				exitValue = pc.process();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    		
-    		if(exitValue == 0) {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("sniffing", pc.getResultSb())
-            	.encode());
-    		}	
-    		*/
-
-    	});
-    	
-       	router.get("/master/sniffing/stop").handler(rc -> {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("state", "stop")
-            	.encode());
-    		
-    		/*
-    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-l","stop"};
-    		PythonCaller pc = new PythonCaller(pythonLocationScript);
-    		int exitValue = -1;
-    		try {
-				exitValue = pc.process();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    		
-    		if(exitValue == 0) {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("sniffing", pc.getResultSb())
-            	.encode());
-    		}	
-    		*/
-
+    		});
     	});
     	
     	router.post("/master/jamming/start/").handler(rc -> {
