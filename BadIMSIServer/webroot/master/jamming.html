@@ -29,14 +29,26 @@
         }
 
         function stopJammingAndFakeBTS() {
+          /*
           $.get('/master/jamming/stop', function(object){
               alert('Jamming state: '+object.state);
           });
-          
+          */
           $.get('/master/fakebts/stop', function(object){
               alert('Fake BTS state: '+object.state);
           });
-        }        
+        }
+        
+        // We have to save the operator before
+        function startJammingAndFakeBTS() {
+        	 var bts = document.getElementById('bts');
+             var jsonResponse = {
+           		  'bts'		 : bts.options[bts.selectedIndex].value
+             }
+             $.post('/master/fakebts/start/', jsonResponse, function(data){
+            	 alert('Fake BTS state: '+data.state+ '\nBTS selected: '+data.bts);
+             });
+        }
     </script>
   </head>
   <body>
@@ -60,7 +72,6 @@
                  role="button"  aria-expanded="false">Hakim Badis<span  class="caret"></span>
               </a>
               <ul  class="dropdown-menu"  role="menu">
-                <li><a  href="#">Edit profile</a></li>
                 <li><a href="#" id="logout" onclick="stopSession(); return false;">Log out</a></li>
               </ul>
             </li>
@@ -97,18 +108,17 @@
               <form  class="bs-component">
                 <div  class="form-group"> <label  for="operator"  class="col-lg-2 control-label">BTS</label>
                   <div  class="col-lg-8">
-                    <select  class="form-control"  id="operator">
-                      <option  selected="selected">#1 (-18 dbm)</option>
-                      <option>#2 (-27 dbm)</option>
-                      <option>#3 (-56 dbm)</option>
-                      <option>#4 (-78 dbm)</option>
-                      <option>#5 (-89 dbm)</option>
+                    <select  class="form-control"  id="bts">
+                      <option  selected="selected" value="1">#1 (-18 dbm)</option>
+                      <option value="2">#2 (-27 dbm)</option>
+                      <option value="3">#3 (-56 dbm)</option>
+                      <option value="4">#4 (-78 dbm)</option>
+                      <option value="5">#5 (-89 dbm)</option>
                     </select>
                   </div>
                 </div>
                 <div  class="form-group">
-                  <div> <a  href="#"  class="btn btn-primary">Clone</a> </div>
-                  <div> <a  href="#" id="jam" onclick="stopJammingAndFakeBTS(); return false;" class="btn btn-danger">Stop</a> </div>
+                  <div> <a  href="#"  class="btn btn-primary" id="clone" onclick="startJammingAndFakeBTS();">Clone</a> <a  href="#" id="jam" onclick="stopJammingAndFakeBTS();" class="btn btn-danger">Stop</a> </div>
                 </div>
               </form>
             </div>
