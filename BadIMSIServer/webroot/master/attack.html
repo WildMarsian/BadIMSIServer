@@ -25,9 +25,11 @@
         function sendSMSToCore() {
         	 var sender = document.getElementById('sender').value;
         	 var message = document.getElementById('message').value;
+        	 var imsi = document.getElementById('imsi').value;
              var jsonRequest = {
            		  'sender'		 : sender,
-           		  'message'		 : message
+           		  'message'		 : message,
+           		  'imsi'		 : imsi
              }
              $.post('/master/attack/sms/send/', jsonRequest, function(object){
             	 alert('Sender: '+object.sender+ '\nMessage: '+object.message);
@@ -98,6 +100,13 @@
             <div  class="panel-body">
               <form  class="form-horizontal">
                 <fieldset>
+                  <div  class="form-group"> <label  for="imsi"  class="col-lg-2 control-label">IMSI</label>
+                    <div  class="col-lg-10"> 
+                    	<select  class="form-control"  id="imsi">
+                      		<option  selected="selected" value="82008517555454">82008517555454</option>
+                    	</select>
+                    </div>
+                  </div>
                   <div  class="form-group"> <label  for="inputEmail"  class="col-lg-2 control-label">Sender</label>
                     <div  class="col-lg-10"> <input  class="form-control"  id="sender" placeholder="Enter sender's number"  type="text"> </div>
                   </div>

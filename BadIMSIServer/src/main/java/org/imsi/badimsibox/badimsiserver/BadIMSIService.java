@@ -337,8 +337,9 @@ public class BadIMSIService extends AbstractVerticle {
     			
     			String sender = reqJson.getString("sender");
     			String msg = reqJson.getString("message");
+    			String imsi = reqJson.getString("imsi");
     			
-        		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-s","#IMSI",sender, msg};
+        		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-s", imsi, sender, msg};
         		
         		for (String arg : pythonLocationScript) {
         			System.out.print(arg+" ");
