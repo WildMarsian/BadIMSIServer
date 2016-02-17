@@ -59,12 +59,13 @@
 	 	eb.onopen = function() {
 		  // set a handler to receive a message
 		  eb.registerHandler('imsi.new', function(err, res) {
-			  ohSnap('You\'ve received new imsi'+res.body.IMSI, {color :'blue'}, {'duration':'4000'});  
+			  $('#imsi').html(res.body.IMSI)
+			  $('#tmsi').html(res.body.TMSI)
+			  $('#imei').html(res.body.IMEI)
 		  });
 	 	};
     </script>
   </head>
-  <div id="ohsnap"></div>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
       <div  class="container">
@@ -155,10 +156,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr  class="info">
-                    <td>82008517555454</td>
-                    <td>0x5ef69</td>
-                    <td>358548051323545</td>
+                  <tr class="info">
+                  	<td id="imsi"></td>
+                  	<td id="tmsi"></td>
+                  	<td id="imei"></td>
                   </tr>
                 </tbody>
               </table>
