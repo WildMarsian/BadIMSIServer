@@ -10,6 +10,9 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.ext.web.handler.sockjs.BridgeOptions;
+import io.vertx.ext.web.handler.sockjs.PermittedOptions;
+import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 public class BadIMSIService extends AbstractVerticle {
 	private Session currentSession = Session.init();
@@ -369,6 +372,12 @@ public class BadIMSIService extends AbstractVerticle {
     		});
 
     	});
+    	
+    	router.route("/eventbus/*").handler(SockJSHandler.create(vertx)
+    			.bridge(new BridgeOptions()
+    					.addOutboundPermitted(
+    							new PermittedOptions().setAddress("sms.new"))
+    					));
     	
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
