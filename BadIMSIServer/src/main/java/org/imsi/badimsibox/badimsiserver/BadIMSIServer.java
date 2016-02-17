@@ -17,7 +17,7 @@ public class BadIMSIServer {
         new NewSmsObserver(smsManager, vertx);
         
         try {
-        	Thread.sleep(10000);
+        	Thread.sleep(5000);
 			badIMSIService.getAllSms();
 		} catch (InterruptedException e1) {
 			// TODO Auto-generated catch block
