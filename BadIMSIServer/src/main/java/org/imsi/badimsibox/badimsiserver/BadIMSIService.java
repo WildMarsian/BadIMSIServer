@@ -69,7 +69,6 @@ public class BadIMSIService extends AbstractVerticle {
 			}
 			
 			if(proc.exitValue() == 0) {
-				
 				if(smsList.size() > 0) {
 					for (Sms sms : smsList) {
 						vertx.eventBus().publish("sms.new", sms.toJson());
@@ -78,8 +77,7 @@ public class BadIMSIService extends AbstractVerticle {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
-		
+		}	
 	}
    
 	@Override
