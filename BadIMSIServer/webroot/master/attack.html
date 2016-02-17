@@ -46,14 +46,13 @@
 	 	eb.onopen = function() {
 		  // set a handler to receive a message
 		  eb.registerHandler('sms.new', function(err, res) {
-			  ohSnap('You\'ve received new sms'+res.body.message, {color :'blue'}, {'duration':'4000'});  
+			  ohSnap('<p>'+res.body.date+'</p><p>'+res.body.message+'</p>');    
 		  });
 	 	};
 	 	
     </script>
     
   </head>
-  <div id="ohsnap"></div>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
       <div  class="container">
@@ -140,7 +139,7 @@
         <div  class="col-md-4">
           <div  class="panel panel-default">
             <div  class="panel-body">SMS sent to target</div>
-            <div  class="panel-footer">
+            <div  class="panel-footer" style="height:350px; overflow:auto">
               <div  class="well">
                 <p>Sms sent (source : 06 33 72 55 44)</p>
                 <p>Donec id elit non mi porta gravida at eget metus. Maecenas
@@ -157,16 +156,9 @@
         <div  class="col-md-4">
           <div  class="panel panel-default">
             <div  class="panel-body">Read target SMS</div>
-            <div  class="panel-footer">
-              <div  class="well">
-                <p>Sms sent to 06 12 43 55 67</p>
-                <p>Donec id elit non mi porta gravida at eget metus. Maecenas
-                  sed diam eget risus varius blandit.</p>
-              </div>
-              <div  class="well">
-                <p>Sms sent to 06 52 33 75 00</p>
-                <p>Donec id elit non mi porta gravida at eget metus. Maecenas
-                  sed diam eget risus varius blandit.</p>
+            <div  class="panel-footer" style="height:350px; overflow:auto">
+              <div class="well" id="ohsnap">
+
               </div>
             </div>
           </div>

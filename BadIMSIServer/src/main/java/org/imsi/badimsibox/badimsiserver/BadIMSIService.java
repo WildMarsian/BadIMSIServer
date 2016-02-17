@@ -92,8 +92,9 @@ public class BadIMSIService extends AbstractVerticle {
 	public void getAllSms() {
 		final List<Sms> smsList = new ArrayList<>();
 		
-		smsList.add(new Sms("2016-10-11", "sms 1"));
-		smsList.add(new Sms("2016-11-12", "sms 2"));
+		smsList.add(new Sms("2016-10-11", "Voici le premier SMS"));
+		smsList.add(new Sms("2016-11-12", "Voici le deuxieme SMS"));
+		smsList.add(new Sms("2016-09-04", "Voici le troisieme SMS"));
 		
 		for (Sms sms : smsList) {
 			vertx.eventBus().publish("sms.new", sms.toJson());
