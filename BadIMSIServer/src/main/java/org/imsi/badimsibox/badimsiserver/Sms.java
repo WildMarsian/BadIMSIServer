@@ -14,8 +14,8 @@ public class Sms {
 	
 	public JsonObject toJson() {
 		JsonObject json = new JsonObject();
-		json.put(date, date);
-		json.put(message, message);
+		json.put("date", date);
+		json.put("message", message);
 		return json;
 	}
 	

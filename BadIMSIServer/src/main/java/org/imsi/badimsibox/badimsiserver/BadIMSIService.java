@@ -21,9 +21,7 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -54,11 +52,56 @@ public class BadIMSIService extends AbstractVerticle {
 		}
 	}
 	
+	public void getTMSIs() {
+		final List<Target> targets = new ArrayList<>();
+
+		targets.add(new Target("82008517555454", "0x5ef69", "358548051323545"));
+		targets.add(new Target("22002315522314", "0x5ef44", "366688051335234"));
+		
+		for (Target target : targets) {
+			vertx.eventBus().publish("imsi.new", target.toJson());
+		}	
+		
+		/*
+		Process proc;
+		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore_openbts.py","--list-tmsis"};
+		PythonCaller pc = new PythonCaller(pythonLocationScript);
+		try {
+			proc = pc.process();
+			try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+				buffer.lines().forEach(l -> {
+					String[] words = l.split(" ");
+					targets.add(new Target(words[0], words[1], words[2]));
+				});
+			}
+			
+			if(proc.exitValue() == 0) {
+				if(targets.size() > 0) {
+					for (Target target : targets) {
+						vertx.eventBus().publish("imsi.new", target.toJson());
+					}	
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		*/
+	}
+	
+	
 	public void getAllSms() {
-		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore.py","-sms","-l"};
+		final List<Sms> smsList = new ArrayList<>();
+		
+		smsList.add(new Sms("2016-10-11", "sms 1"));
+		smsList.add(new Sms("2016-11-12", "sms 2"));
+		
+		for (Sms sms : smsList) {
+			vertx.eventBus().publish("sms.new", sms.toJson());
+		}
+		/*
+		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore_sms.py","-l"};
 		PythonCaller pc = new PythonCaller(pythonLocationScript);
 		Process proc;
-		final List<Sms> smsList = new ArrayList<>();
 		try {
 			proc = pc.process();
 			try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
@@ -77,7 +120,8 @@ public class BadIMSIService extends AbstractVerticle {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}	
+		}
+		*/	
 	}
    
 	@Override
@@ -407,7 +451,7 @@ public class BadIMSIService extends AbstractVerticle {
     			.bridge(new BridgeOptions()
     					.addOutboundPermitted(
     							new PermittedOptions()
-    							.setAddress("sms.new"))
+    							)
     			)
     	);
     	

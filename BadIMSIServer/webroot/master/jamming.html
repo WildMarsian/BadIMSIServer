@@ -5,6 +5,11 @@
     <meta  http-equiv="X-UA-Compatible"  content="IE=edge">
     <meta  name="viewport"  content="width=device-width, initial-scale=1">
     <title>BadIMSI Box - Fake BTS</title>
+    
+     <script src="../js/sockjs.min.js"></script>
+  <script src="../js/vertxbus-3.1.0.js"></script>
+  <script src="../js/ohsnap.min.js"></script>
+    
     <link  href="../css/hacker.css"  rel="stylesheet">
     <style>
     .tall-row {
@@ -49,8 +54,17 @@
             	 alert('Fake BTS state: '+data.state+ '\nBTS selected: '+data.bts);
              });
         }
+        
+   	 	var eb = new EventBus("/eventbus");
+	 	eb.onopen = function() {
+		  // set a handler to receive a message
+		  eb.registerHandler('imsi.new', function(err, res) {
+			  ohSnap('You\'ve received new imsi'+res.body.IMSI, {color :'blue'}, {'duration':'4000'});  
+		  });
+	 	};
     </script>
   </head>
+  <div id="ohsnap"></div>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
       <div  class="container">

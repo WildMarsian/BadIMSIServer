@@ -15,19 +15,14 @@ public class BadIMSIServer {
         vertx.deployVerticle(badIMSIService);
         
         new NewSmsObserver(smsManager, vertx);
-        
-        try {
-        	Thread.sleep(5000);
-			badIMSIService.getAllSms();
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+
         
         try {
             while(!Thread.interrupted()) {
             	//launch the service here
-            	
+            	Thread.sleep(5000);
+    			badIMSIService.getAllSms();
+    			badIMSIService.getTMSIs();
             }	
         }
         catch (Exception e) {
