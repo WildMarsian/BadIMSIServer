@@ -220,24 +220,30 @@ public class BadIMSIService extends AbstractVerticle {
                         String operator = reqJson.getString("operator");
                         
                         // Calling python script to launch the sniffing
-                        String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore.py", "-listen","-a",operator};
+                        String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore-listen.py","-o",operator};
+                        // -b => bande de fréquence ex : GSM800
+                        // -t => temps de scan sur chaque fréquence
+                        // -n => nombre de cycles de scan
                         PythonCaller pc = new PythonCaller(pythonLocationScript);
                         
-                        try {
                             // getting the sdtout of the python script
-                            Stream<String> streamBTS = (Stream<String>) pc.process().getInputStream();
-                            streamBTS.filter(line -> !line.startsWith("#")).map(line -> line.split(",")).forEach((tab) -> {
-                                // just to debug by display because WE ARE WARRIORS !!!!
-                                System.out.println("Line : " + tab);
-                                List<String> arfcns = new ArrayList<>(tab.length-4);
-                                for (int i = 4; i < tab.length; i++) {
-                                    arfcns.add(tab[i]);
+                            try {
+                                Process process = pc.process();
+                                try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                                    br.lines().filter(line -> !line.startsWith("#")).map(line -> line.split(",")).forEach((tab) -> {
+                                        // System.out.println(tab);
+                                        List<String> arfcns = new ArrayList<>(tab.length-4);
+                                        for (int i = 4; i < tab.length; i++) {
+                                            arfcns.add(tab[i]);
+                                        }
+                                        operatorList.add(new Bts(tab[0], tab[1], tab[2], tab[3], arfcns));
+                                    });
+                                } catch (Exception ex) {
+                                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
                                 }
-                                operatorList.add(new Bts(tab[0], tab[1], tab[2], tab[3], arfcns));
-                            });
-                        } catch (IOException ex) {
-                            Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                        }
+                            } catch (IOException ex) {
+                                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                            }
 
     			JsonArray array = new JsonArray();
     			operatorList.forEach(item -> {
@@ -261,6 +267,7 @@ public class BadIMSIService extends AbstractVerticle {
     		});
     	});
         
+        // return the list of all BTS discovered in the sniffing step
         router.route("/master/jamming/operator/").handler(rc -> {
     		JsonArray array = new JsonArray();
                 operatorList.forEach(item -> {
@@ -339,66 +346,75 @@ public class BadIMSIService extends AbstractVerticle {
 
     	router.post("/master/fakebts/start/").handler(rc -> {    		
     		final JsonObject reqJson = new JsonObject();
-    		final Map<String, String> params = new HashMap<String, String>();
-    		
+    		final Map<String, String> params = new HashMap<>();
+                
+                String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore_openbts.py","start"};
+    		PythonCaller pc = new PythonCaller(pythonLocationScript);
+                
+                int exitCode = -1;
+                
+                try {
+                    Process process = pc.process();
+                    exitCode = process.exitValue();
+                    
+                } catch (IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                final int finalCode = exitCode;
+                
+    		// Creating answer for the client
     		rc.request().bodyHandler(h -> {
     			parseJsonParams(params,reqJson, h);
     			for (String key : params.keySet()) {
     				reqJson.put(key, params.get(key));
     			}
-    			
-    			reqJson.put("state", "start");
+    			if (finalCode != 0) {
+                            reqJson.put("openbts#state", "failed");
+                        } else {
+                            reqJson.put("openbts#state", "started");
+                        }
     			rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(reqJson.encode());
+                        .putHeader("content-type", "application/json")
+                        .end(reqJson.encode());
     		});
-    		
-    		/*
-    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","start"};
-    		PythonCaller pc = new PythonCaller(pythonLocationScript);
-    		int exitValue = -1;
-    		try {
-				exitValue = pc.process();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    		
-    		if(exitValue == 0) {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("fake bts", pc.getResultSb())
-            	.encode());
-    		}	
-    		*/
     	});
 
-    	
     	router.get("/master/fakebts/stop").handler(rc -> {    		
-    		// We have to give the right response
-    		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("state", "stop")
-            	.encode());
-    		
-    		/*
-    		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-b","stop"};
+    		final JsonObject reqJson = new JsonObject();
+    		final Map<String, String> params = new HashMap<>();
+                
+                String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore_openbts.py","stop"};
     		PythonCaller pc = new PythonCaller(pythonLocationScript);
-    		int exitValue = -1;
-    		try {
-				exitValue = pc.process();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-    		
-    		if(exitValue == 0) {
-        		rc.response()
-            	.putHeader("content-type", "application/json")
-            	.end(new JsonObject().put("fake bts", pc.getResultSb())
-            	.encode());
-    		}	
-    		*/
+                
+                int exitCode = -1;
+            
+                try {
+                    Process process = pc.process();
+                    exitCode = process.exitValue();
+                } catch (IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                final int finalCode = exitCode;
+            
+                // Creating answer for the client
+    		rc.request().bodyHandler(h -> {
+    			parseJsonParams(params,reqJson, h);
+    			for (String key : params.keySet()) {
+    				reqJson.put(key, params.get(key));
+    			}
+                        if (finalCode == 0) {
+                            reqJson.put("openbts#state", "stopped");
+                        } else {
+                            reqJson.put("openbts#state", "critical");
+                        }
+                        
+    			rc.response()
+                        .putHeader("content-type", "application/json")
+                        .end(reqJson.encode());
+    		});
     	});
-
 
     	router.post("/master/attack/sms/send/").handler(rc -> {    		
     		// We have to give the right response
