@@ -6,6 +6,11 @@
     <meta  name="viewport"  content="width=device-width, initial-scale=1">
     <title>BadIMSI Box - Attack</title>
     <link  href="../css/hacker.css"  rel="stylesheet">
+    
+  <script src="../js/sockjs.min.js"></script>
+  <script src="../js/vertxbus-3.1.0.js"></script>
+  <script src="../js/ohsnap.min.js"></script>
+    
     <style>
     .tall-row {
         margin-top: 40px;
@@ -35,8 +40,20 @@
             	 alert('Sender: '+object.sender+ '\nMessage: '+object.message);
              });
         }
+        
+        
+   	 	var eb = new EventBus("/eventbus");
+	 	eb.onopen = function() {
+		  // set a handler to receive a message
+		  eb.registerHandler('sms.new', function(err, res) {
+			  ohSnap('You\'ve received new sms'+res.body.message, {color :'blue'}, {'duration':'4000'});  
+		  });
+	 	};
+	 	
     </script>
+    
   </head>
+  <div id="ohsnap"></div>
   <body>
     <nav  class="navbar navbar-default navbar-static-top">
       <div  class="container">
@@ -83,9 +100,7 @@
       </div>
       <div  class="row">
         <div  class="col-lg-12">
-          <div  class="alert alert-dismissible alert-warning"> <button  type="button"
-
-               class="close">×</button>
+          <div  class="alert alert-dismissible alert-warning"> <button  type="button" class="close">×</button>
             <h4>You can go on!</h4>
             <p>The target mobile is connected to our fake BTS.</p>
           </div>

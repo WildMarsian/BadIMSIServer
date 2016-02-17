@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,7 +19,11 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -29,6 +34,11 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
     static List<Bts> operatorList = new ArrayList<>();
+    private Vertx vertx;
+    
+    public BadIMSIService(Vertx vertx) {
+		this.vertx = vertx;
+	}
     
 	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
 		String bufferMessage = h.toString();		
@@ -42,6 +52,34 @@ public class BadIMSIService extends AbstractVerticle {
 		            params.put((valueSplits[0]),msg);
 		        }
 		}
+	}
+	
+	public void getAllSms() {
+		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore.py","-sms","-l"};
+		PythonCaller pc = new PythonCaller(pythonLocationScript);
+		Process proc;
+		final List<Sms> smsList = new ArrayList<>();
+		try {
+			proc = pc.process();
+			try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+				buffer.lines().forEach(l -> {
+					String[] words = l.split(" ");
+					smsList.add(new Sms(words[0], words[1]));
+				});
+			}
+			
+			if(proc.exitValue() == 0) {
+				
+				if(smsList.size() > 0) {
+					for (Sms sms : smsList) {
+						vertx.eventBus().publish("sms.new", sms.toJson());
+					}	
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
    
 	@Override
@@ -124,7 +162,7 @@ public class BadIMSIService extends AbstractVerticle {
     		}	
     		*/
     	});
-
+		
     	router.post("/master/sniffing/start/").handler(rc -> {
     		final JsonObject reqJson = new JsonObject();	
     		final Map<String,String> params = new HashMap<>();
@@ -140,7 +178,7 @@ public class BadIMSIService extends AbstractVerticle {
                         String operator = reqJson.getString("operator");
                         
                         // Calling python script to launch the sniffing
-                        String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore-listen","-a",operator};
+                        String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore.py", "-listen","-a",operator};
                         PythonCaller pc = new PythonCaller(pythonLocationScript);
                         
                         try {
@@ -367,11 +405,13 @@ public class BadIMSIService extends AbstractVerticle {
 
     	});
     	
-    	router.route("/eventbus/*").handler(SockJSHandler.create(vertx)
+		router.route("/eventbus/*").handler(SockJSHandler.create(vertx)
     			.bridge(new BridgeOptions()
     					.addOutboundPermitted(
-    							new PermittedOptions().setAddress("sms.new"))
-    					));
+    							new PermittedOptions()
+    							.setAddress("sms.new"))
+    			)
+    	);
     	
 		router.route().handler(StaticHandler.create());
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);
