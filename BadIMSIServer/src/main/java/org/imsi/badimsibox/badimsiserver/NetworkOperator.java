@@ -45,6 +45,11 @@ public class NetworkOperator {
 		}
 	}
 	
+	public String getMcc() {
+		return mcc;
+	}
+
+
 	@Override
 	public String toString() {
 		return getNetworkName()+": "+this.mnc+" "+this.mcc;
