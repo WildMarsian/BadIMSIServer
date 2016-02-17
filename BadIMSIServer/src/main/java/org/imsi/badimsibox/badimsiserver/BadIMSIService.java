@@ -14,10 +14,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class BadIMSIService extends AbstractVerticle {
@@ -25,6 +23,7 @@ public class BadIMSIService extends AbstractVerticle {
 	static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
+    static List<Bts> operatorList = new ArrayList<>();
     
 	private void parseJsonParams(Map<String,String> params, JsonObject reqJson, Buffer h) {
 		String bufferMessage = h.toString();		
@@ -139,9 +138,6 @@ public class BadIMSIService extends AbstractVerticle {
                         String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore-listen","-a",operator};
                         PythonCaller pc = new PythonCaller(pythonLocationScript);
                         
-                        // Building the answer
-                        List<Bts> operatorList = new ArrayList<>();
-                        
                         try {
                             // getting the sdtout of the python script
                             Stream<String> streamBTS = (Stream<String>) pc.process().getInputStream();
@@ -179,6 +175,27 @@ public class BadIMSIService extends AbstractVerticle {
     			.end(array.encode());
     		});
     	});
+        
+        router.route("/master/jamming/operator/").handler(rc -> {
+    		JsonArray array = new JsonArray();
+                operatorList.forEach(item -> {
+                        JsonObject jsonObject = new JsonObject();
+                        jsonObject.put("Network", item.getOperatorByMnc());
+                        jsonObject.put("MCC", item.getOperator().getMcc());
+                        jsonObject.put("LAC", item.getLac());
+                        jsonObject.put("CI", item.getCi());
+                        StringBuilder sb = new StringBuilder();
+                        item.getArfcn().forEach(arfcn -> {
+                                sb.append(arfcn);
+                                sb.append(", ");
+                        });
+                        sb.delete(sb.length()-1	, sb.length());
+                        jsonObject.put("ARFCNs", sb.toString());
+                        array.add(jsonObject);
+                });
+                rc.response().putHeader("content-type", "application/json")
+                .end(array.encode());
+        });
     	
     	router.post("/master/jamming/start/").handler(rc -> {
     		String operator = rc.request().getParam("operator");
