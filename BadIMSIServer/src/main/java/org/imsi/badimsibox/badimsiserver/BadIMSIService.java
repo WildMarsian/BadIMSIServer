@@ -291,14 +291,24 @@ public class BadIMSIService extends AbstractVerticle {
         });
     	
     	router.post("/master/jamming/start/").handler(rc -> {
-    		String operator = rc.request().getParam("operator");
-    		if(operator != null) {
-        		// We have to give the right response
-        		rc.response()
-                	.putHeader("content-type", "application/json")
-                	.end(new JsonObject().put("state", "start").put("operator", operator)
-                	.encode());    			
-    		}
+    		final JsonObject reqJson = new JsonObject();	
+    		final Map<String,String> params = new HashMap<>();
+    		
+    		rc.request().bodyHandler(h -> {
+    			parseJsonParams(params, reqJson, h);
+                        // Building the JSON on server side sent by client
+    			for (String key : params.keySet()) {
+    				reqJson.put(key, params.get(key));
+    			}
+    			String operator = reqJson.getString("operator");
+	    		if(operator != null) {
+	        		// We have to give the right response
+	        		rc.response()
+	                	.putHeader("content-type", "application/json")
+	                	.end(new JsonObject().put("state", "start").put("operator", operator)
+	                	.encode());    
+	    		}
+	    	});
     		
     		/*
     		String[] pythonLocationScript = {PythonCaller.getContextPath()+"badimsicore","-j",name};
