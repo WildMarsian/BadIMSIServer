@@ -15,20 +15,18 @@ public class Bts {
 		this.ci = ci;
 		this.arfcn = arfcn;
 	}
-	
+
 	public Bts(NetworkOperator operator, String lac, String ci, List<String> arfcn) {
 		this.operator = operator;
 		this.lac = lac;
 		this.ci = ci;
 		this.arfcn = arfcn;
 	}
-	
+
 	public String getOperatorByMnc() {
 		return operator.getNetworkName();
 	}
-	
-	
-	
+
 	public NetworkOperator getOperator() {
 		return operator;
 	}
@@ -47,6 +45,6 @@ public class Bts {
 
 	@Override
 	public String toString() {
-		return this.operator+" "+this.lac+" "+this.ci+" "+this.arfcn;
+		return this.operator + " " + this.lac + " " + this.ci + " " + this.arfcn;
 	}
 }
