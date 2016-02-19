@@ -14,7 +14,7 @@ public class BadIMSIServer {
 		vertx.deployVerticle(badIMSIService);
 
 		new NewSmsObserver(smsManager, vertx);
-
+		/*
 		try {
 			while (!Thread.interrupted()) {
 				// launch the service here
@@ -25,5 +25,6 @@ public class BadIMSIServer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		*/
 	}
 }

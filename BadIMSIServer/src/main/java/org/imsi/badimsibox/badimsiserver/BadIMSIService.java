@@ -154,7 +154,7 @@ public class BadIMSIService extends AbstractVerticle {
 
 				// retrieving the operator name from HTML page
 				String operator = reqJson.getString("operator");
-
+				System.out.println("Selected operator: " + operator);
 				// Calling python script to launch the sniffing
 				String[] pythonLocationScript = { PythonCaller.getContextPath() + "badimsicore-listen.py", "-o", operator };
 				// -b => bande de fréquence ex : GSM800
@@ -261,7 +261,7 @@ public class BadIMSIService extends AbstractVerticle {
 		router.post("/master/fakebts/start/").handler(rc -> {
 			final JsonObject reqJson = new JsonObject();
 			final Map<String, String> params = new HashMap<>();
-
+			
 			String[] pythonLocationScript = { PythonCaller.getContextPath() + "badimsicore_openbts.py", "start" };
 			PythonCaller pc = new PythonCaller(pythonLocationScript);
 
