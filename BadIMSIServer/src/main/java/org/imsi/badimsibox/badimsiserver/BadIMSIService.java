@@ -141,27 +141,6 @@ public class BadIMSIService extends AbstractVerticle {
 			}
 		});
 
-		router.get("/master/map/:locate").handler(rc -> {
-			// Actually, this is an example: Remove me when you put the right
-			// code
-			String name = "48.839915,2.5842899,17z";
-			rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("location", name).encode());
-
-			/*
-			 * // Example to call python files from Java String[]
-			 * pythonLocationScript =
-			 * {"/path/to/script/python/locate_me.py","-i","input","-o",
-			 * "output"}; PythonCaller pc = new
-			 * PythonCaller(pythonLocationScript); int exitValue = -1; try {
-			 * exitValue = pc.process(); } catch (Exception e) {
-			 * e.printStackTrace(); }
-			 * 
-			 * if(exitValue == 0) { rc.response() .putHeader("content-type",
-			 * "application/json") .end(new JsonObject().put("location",
-			 * pc.getResultSb()) .encode()); }
-			 */
-		});
-
 		router.post("/master/sniffing/start/").handler(rc -> {
 			final JsonObject reqJson = new JsonObject();
 			final Map<String, String> params = new HashMap<>();
