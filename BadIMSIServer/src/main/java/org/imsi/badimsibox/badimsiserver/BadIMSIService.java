@@ -187,13 +187,13 @@ public class BadIMSIService extends AbstractVerticle {
 				try {
 					Process process = pc.process();
 					try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-						br.lines().filter(line -> !line.startsWith("#")).map(line -> line.split(",")).forEach((tab) -> {
+						br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(",")).forEach((tab) -> {
 							// System.out.println(tab);
 							List<String> arfcns = new ArrayList<>(tab.length - 4);
 							for (int i = 4; i < tab.length; i++) {
 								arfcns.add(tab[i]);
 							}
-							operatorList.add(new Bts(tab[0], tab[1], tab[2], tab[3], arfcns));
+							operatorList.add(new Bts(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
 						});
 					} catch (Exception ex) {
 						Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
