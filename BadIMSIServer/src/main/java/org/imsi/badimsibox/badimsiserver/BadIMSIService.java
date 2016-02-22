@@ -167,22 +167,16 @@ public class BadIMSIService extends AbstractVerticle {
         });
         
         router.route("/master/sniffing/status/").handler(rc -> {
-            rc.request().bodyHandler(h -> {
-                
                 String status = snifferHandler.status();
-
                 JsonObject answer = new JsonObject();
                 answer.put("status", status);
                 answer.put("error", snifferHandler.getError());
                 rc.response().putHeader("content-type", "application/json").end(answer.encode());
-            });
         });
         
         router.route("/master/sniffing/getData/").handler(rc -> {
-            rc.request().bodyHandler(h -> {
                 JsonArray array = snifferHandler.getResult();
                 rc.response().putHeader("content-type", "application/json").end(array.encode());
-            });
         });
         
         // return the list of all BTS discovered in the sniffing step
