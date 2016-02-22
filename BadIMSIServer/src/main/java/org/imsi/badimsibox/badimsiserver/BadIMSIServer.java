@@ -23,7 +23,6 @@ public class BadIMSIServer {
 				// launch the service here
 				Thread.sleep(5000);
 				badIMSIService.getAllSms();
-				Files.delete(Paths.get("./scripts/smqueue.txt.offset"));
 				//badIMSIService.getTMSIs();
 			}
 		} catch (Exception e) {

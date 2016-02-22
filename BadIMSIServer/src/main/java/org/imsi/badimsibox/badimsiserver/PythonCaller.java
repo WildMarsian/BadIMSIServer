@@ -17,6 +17,8 @@ public class PythonCaller {
 	private final String cmd;
 	private final PythonActionHandler actionHandler;
 	
+	private Process p = null;
+	
 	public PythonCaller(String[] scriptPath, PythonActionHandler pythonActionHandler) {
 		if (scriptPath.length == 0) {
 			throw new IllegalArgumentException("No args found");
@@ -39,10 +41,14 @@ public class PythonCaller {
 	public void exec() throws IOException, InterruptedException {
 		Runtime rt = Runtime.getRuntime();
 		Process p = rt.exec(cmd);
-		p.wait();
+		//p.wait();
+		
+	}
+	
+	public void process() {
 		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream(), p.exitValue());
 	}
-
+ 
 	public static String getCleanPath() {
 		URL location = PythonCaller.class.getProtectionDomain().getCodeSource().getLocation();
 		String path = location.getFile();

@@ -155,7 +155,7 @@ public class BadIMSIService extends AbstractVerticle {
                 String operator = reqJson.getString("operator");
                 
                 // Calling python script to launch the sniffing
-                String[] pythonLocationScript = {"./badimsicore-listen.py", "-o", operator};
+                String[] pythonLocationScript = {"./scripts/badimsicore_listen.py", "-o", operator};
 
                 snifferHandler = new Sniffer();
                 

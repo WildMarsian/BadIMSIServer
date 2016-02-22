@@ -24,16 +24,19 @@ public class Sniffer {
     final private AtomicBoolean isOver = new AtomicBoolean(false);
     private Exception error = null;
     private Thread thread;
+    
+    private PythonCaller pc =null;
 
     public JsonArray getResult() {
         synchronized (lock) {
+        	pc.process();
             return array;
         }
     }
 
     boolean start(JsonObject reqJson, String[] pythonLocationScript) {
         thread = new Thread(() -> {
-            PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+            pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
                     br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(",")).forEach((tab) -> {
                         // System.out.println(tab);
