@@ -23,6 +23,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 public class BadIMSIService extends AbstractVerticle {
+	
 	private Session currentSession = Session.init();
 	static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
 	static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";

@@ -1,8 +1,11 @@
 package org.imsi.badimsibox.badimsiserver;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Objects;
 
 /**
@@ -11,33 +14,32 @@ import java.util.Objects;
 
 public class PythonCaller {
 	private static String contextPath = "/opt/badimsicore/";
-	private final String program = "python";
 	private final String cmd;
-
-	public PythonCaller(String[] scriptPath) {
+	private final PythonActionHandler actionHandler;
+	
+	public PythonCaller(String[] scriptPath, PythonActionHandler pythonActionHandler) {
 		if (scriptPath.length == 0) {
 			throw new IllegalArgumentException("No args found");
 		}
 		Objects.requireNonNull(scriptPath);
 		StringBuilder sb = new StringBuilder();
-		sb.append(program);
+		// sb.append(program);
 		for (String string : scriptPath) {
 			sb.append(" ");
 			sb.append(string);
 		}
+		this.actionHandler = pythonActionHandler;
 		this.cmd = sb.toString();
 	}
-
-	public Process process() throws IOException {
+	
+	private void exec() throws IOException, InterruptedException {
 		Runtime rt = Runtime.getRuntime();
-		return rt.exec(cmd);
+		Process p = rt.exec(cmd);
+		p.waitFor();
+		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream(), p.exitValue());
 	}
 
-	public static String getContextPath() {
-		return contextPath;
-	}
-
-	public static String getCleanPath() {
+	private static String getCleanPath() {
 		URL location = PythonCaller.class.getProtectionDomain().getCodeSource().getLocation();
 		String path = location.getFile();
 		return new File(path).getParent() + "/" + new File(path).getName();
@@ -53,5 +55,25 @@ public class PythonCaller {
 			sb.append(arg + " ");
 		}
 		System.out.println("Error on the script : no script found for " + sb.toString());
+	}
+	
+	public static void main(String[] args) throws IOException, InterruptedException {
+		String[] cmd = {"./scripts/test.py", "-i", "file.input", "-o", "file.output"};
+		PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
+			if(returnCode == 0) {
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
+				bufferedReader.lines().forEach(l -> {
+					System.out.println(l);
+				});	
+			}
+			else {
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(error));
+				bufferedReader.lines().forEach(l -> {
+					System.out.println(l);
+				});	
+			}
+		});
+		
+		pythonCaller.exec();
 	}
 }
