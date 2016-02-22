@@ -1,11 +1,8 @@
 package org.imsi.badimsibox.badimsiserver;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,6 +30,8 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultIpAndPorts = "*";
     static List<Bts> operatorList = new ArrayList<>();
     private Vertx vertx;
+    
+    private Sniffer snifferHandler = null;
 
     public BadIMSIService(Vertx vertx) {
         this.vertx = vertx;
@@ -151,32 +150,41 @@ public class BadIMSIService extends AbstractVerticle {
                 for (String key : params.keySet()) {
                     reqJson.put(key, params.get(key));
                 }
-                Sniffer sn = new Sniffer();
-                JsonArray array = new JsonArray();
-                try {
-                    // retrieving the operator name from HTML page
-                    String operator = reqJson.getString("operator");
-                    // Calling python script to launch the sniffing
-                    String[] pythonLocationScript = {"./badimsicore-listen.py", "-o", operator};
-                    // -b => frequency band ex : GSM800
-                    // -t => time to scan each frequency
-                    // -n => number of cycle to scan frequencies
-                    array = sn.launch(reqJson, pythonLocationScript);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    JsonObject answer = new JsonObject();
-                    String error = "Not Found";
-                    answer.put("Network", error);
-                    answer.put("MCC", error);
-                    answer.put("LAC", error);
-                    answer.put("CI", error);
-                    answer.put("ARFCNs", error);
-                    array.add(new JsonObject());
-                }
+               
+                // retrieving the operator name from HTML page
+                String operator = reqJson.getString("operator");
+                
+                // Calling python script to launch the sniffing
+                String[] pythonLocationScript = {"./badimsicore-listen.py", "-o", operator};
+
+                snifferHandler = new Sniffer();
+                
+                boolean isOver = snifferHandler.start(reqJson, pythonLocationScript);
+                JsonObject answer = new JsonObject();
+                answer.put("started", !isOver);
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+        
+        router.route("/master/sniffing/status/").handler(rc -> {
+            rc.request().bodyHandler(h -> {
+                
+                String status = snifferHandler.status();
+
+                JsonObject answer = new JsonObject();
+                answer.put("status", status);
+                answer.put("error", snifferHandler.getError());
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+        
+        router.route("/master/sniffing/getData/").handler(rc -> {
+            rc.request().bodyHandler(h -> {
+                JsonArray array = snifferHandler.getResult();
                 rc.response().putHeader("content-type", "application/json").end(array.encode());
             });
         });
-
+        
         // return the list of all BTS discovered in the sniffing step
         router.route("/master/jamming/operator/").handler(rc -> {
             JsonArray array = new JsonArray();

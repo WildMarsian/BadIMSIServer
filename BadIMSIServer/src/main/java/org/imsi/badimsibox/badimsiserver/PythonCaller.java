@@ -39,7 +39,7 @@ public class PythonCaller {
 	public void exec() throws IOException, InterruptedException {
 		Runtime rt = Runtime.getRuntime();
 		Process p = rt.exec(cmd);
-		p.waitFor();
+		p.wait();
 		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream(), p.exitValue());
 	}
 
