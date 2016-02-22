@@ -18,16 +18,7 @@ import static org.imsi.badimsibox.badimsiserver.BadIMSIService.operatorList;
 
 public class Sniffer {
 
-    JsonArray launch(JsonObject reqJson) throws InterruptedException, IOException {
-
-        // retrieving the operator name from HTML page
-        String operator = reqJson.getString("operator");
-
-        // Calling python script to launch the sniffing
-        String[] pythonLocationScript = {"badimsicore-listen.py", "-o", operator};
-        // -b => frequency band ex : GSM800
-        // -t => time to scan each frequency
-        // -n => number of cycle to scan frequencies
+    JsonArray launch(JsonObject reqJson, String[] pythonLocationScript) throws InterruptedException, IOException {
         
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {

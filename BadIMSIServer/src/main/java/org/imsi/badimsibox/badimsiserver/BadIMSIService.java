@@ -51,7 +51,8 @@ public class BadIMSIService extends AbstractVerticle {
             }
         }
     }
-/*
+
+    /*
     public void getTMSIs() {
         final List<Target> targets = new ArrayList<>();
 
@@ -78,27 +79,27 @@ public class BadIMSIService extends AbstractVerticle {
             e.printStackTrace();
         }
     }
-*/
+     */
     public void getAllSms() throws IOException {
-   
+
         String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-        	if(returnCode == 0) {
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-				bufferedReader.lines().forEach(l -> {
-					String removeParenthesis = l.replaceAll("[()]", "");
-					String[] splitted = removeParenthesis.split(",");
-					String first = splitted[0].replaceAll("['']", "");
-					String second = splitted[1].replaceAll("['']", "");
-					vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
-				});	
-			}
-		});
-		try {
-			pc.exec();
-		}catch(IOException | InterruptedException ie) {
-			ie.printStackTrace();
-		}
+            if (returnCode == 0) {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+                bufferedReader.lines().forEach(l -> {
+                    String removeParenthesis = l.replaceAll("[()]", "");
+                    String[] splitted = removeParenthesis.split(",");
+                    String first = splitted[0].replaceAll("['']", "");
+                    String second = splitted[1].replaceAll("['']", "");
+                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
+                });
+            }
+        });
+        try {
+            pc.exec();
+        } catch (IOException | InterruptedException ie) {
+            ie.printStackTrace();
+        }
     }
 
     @Override
@@ -153,7 +154,14 @@ public class BadIMSIService extends AbstractVerticle {
                 Sniffer sn = new Sniffer();
                 JsonArray array = new JsonArray();
                 try {
-                    array = sn.launch(reqJson);
+                    // retrieving the operator name from HTML page
+                    String operator = reqJson.getString("operator");
+                    // Calling python script to launch the sniffing
+                    String[] pythonLocationScript = {"./badimsicore-listen.py", "-o", operator};
+                    // -b => frequency band ex : GSM800
+                    // -t => time to scan each frequency
+                    // -n => number of cycle to scan frequencies
+                    array = sn.launch(reqJson, pythonLocationScript);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
                     JsonObject answer = new JsonObject();
@@ -229,7 +237,7 @@ public class BadIMSIService extends AbstractVerticle {
             final JsonObject reqJson = new JsonObject();
             final Map<String, String> params = new HashMap<>();
 
-            String[] pythonLocationScript = {"badimsicore_openbts.py", "start"};
+            String[] pythonLocationScript = {"./badimsicore_openbts.py", "start"};
 
             PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
                 // Creating answer for the client
@@ -249,9 +257,7 @@ public class BadIMSIService extends AbstractVerticle {
 
             try {
                 pc.exec();
-            } catch (IOException ex) {
-                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (InterruptedException ex) {
+            } catch (IOException | InterruptedException ex) {
                 Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
             }
 
@@ -261,7 +267,7 @@ public class BadIMSIService extends AbstractVerticle {
             final JsonObject reqJson = new JsonObject();
             final Map<String, String> params = new HashMap<>();
 
-            String[] pythonLocationScript = {"badimsicore_openbts.py", "stop"};
+            String[] pythonLocationScript = {"./scripts/badimsicore_openbts.py", "stop"};
 
             PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
                 // Creating answer for the client
@@ -281,9 +287,7 @@ public class BadIMSIService extends AbstractVerticle {
 
             try {
                 pc.exec();
-            } catch (IOException ex) {
-                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (InterruptedException ex) {
+            } catch (IOException | InterruptedException ex) {
                 Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
             }
 
@@ -305,26 +309,25 @@ public class BadIMSIService extends AbstractVerticle {
                 String imsi = reqJson.getString("imsi");
 
                 String[] cmd = {PythonCaller.getContextPath() + "badimsicore_sms_sender.py", "-s", imsi, sender, msg};
-        		PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
-        			if(returnCode == 0) {
-        				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
-        				bufferedReader.lines().forEach(l -> {
-        					System.out.println(l);
-        				});	
-        			}
-        			else {
-        				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(error));
-        				bufferedReader.lines().forEach(l -> {
-        					System.out.println(l);
-        				});	
-        			}
-        		});
-        		
-        		try {
-        			pythonCaller.exec();
-        		}catch(IOException | InterruptedException ie) {
-        			System.out.println("File not found");
-        		}
+                PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
+                    if (returnCode == 0) {
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
+                        bufferedReader.lines().forEach(l -> {
+                            System.out.println(l);
+                        });
+                    } else {
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(error));
+                        bufferedReader.lines().forEach(l -> {
+                            System.out.println(l);
+                        });
+                    }
+                });
+
+                try {
+                    pythonCaller.exec();
+                } catch (IOException | InterruptedException ie) {
+                    System.out.println("File not found");
+                }
             });
 
         });
