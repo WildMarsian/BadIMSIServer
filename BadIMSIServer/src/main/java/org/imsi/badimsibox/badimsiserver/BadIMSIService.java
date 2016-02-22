@@ -1,8 +1,11 @@
 package org.imsi.badimsibox.badimsiserver;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -48,7 +51,7 @@ public class BadIMSIService extends AbstractVerticle {
             }
         }
     }
-
+/*
     public void getTMSIs() {
         final List<Target> targets = new ArrayList<>();
 
@@ -75,32 +78,26 @@ public class BadIMSIService extends AbstractVerticle {
             e.printStackTrace();
         }
     }
-
-    public void getAllSms() {
-        final List<Sms> smsList = new ArrayList<>();
-
-        String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore_sms.py", "-l"};
-        PythonCaller pc = new PythonCaller(pythonLocationScript);
-        Process proc;
-        try {
-            proc = pc.process();
-            try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-                buffer.lines().forEach(l -> {
-                    String[] words = l.split(" ");
-                    smsList.add(new Sms(words[0], words[1]));
-                });
-            }
-
-            if (proc.exitValue() == 0) {
-                if (smsList.size() > 0) {
-                    for (Sms sms : smsList) {
-                        vertx.eventBus().publish("sms.new", sms.toJson());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+*/
+    public void getAllSms() throws IOException {
+   
+        String[] pythonLocationScript = {"/home/aisuko/Documents/LastProject/BadIMSI_Workspace/BadIMSIServer/BadIMSIServer/target/classes/badimsicore_sms_interceptor.py", "-i", "smqueue.txt"};
+        PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+        	if(returnCode == 0) {
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+				bufferedReader.lines().forEach(l -> {
+					
+					//vertx.eventBus().publish("sms.new", sms.toJson());
+					System.out.println(l);
+				});	
+			}
+		});
+		
+		try {
+			pc.exec();
+		}catch(IOException | InterruptedException ie) {
+			System.out.println("File error");
+		}
     }
 
     @Override
