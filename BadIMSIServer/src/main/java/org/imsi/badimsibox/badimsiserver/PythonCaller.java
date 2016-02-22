@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Objects;
 
 /**
@@ -30,6 +29,10 @@ public class PythonCaller {
 		}
 		this.actionHandler = pythonActionHandler;
 		this.cmd = sb.toString();
+	}
+	
+	public static String getContextPath() {
+		return contextPath;
 	}
 	
 	public void exec() throws IOException, InterruptedException {

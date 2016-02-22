@@ -306,25 +306,27 @@ public class BadIMSIService extends AbstractVerticle {
                 String msg = reqJson.getString("message");
                 String imsi = reqJson.getString("imsi");
 
-                String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore", "-s", imsi, sender, msg};
-
-                for (String arg : pythonLocationScript) {
-                    System.out.print(arg + " ");
-                }
-
-                /*
-				 * PythonCaller pc = new PythonCaller(pythonLocationScript); int
-				 * exitValue = -1; try { exitValue = pc.process(); } catch
-				 * (Exception e) { e.printStackTrace(); }
-				 * 
-				 * if(exitValue == 0) { rc.response() .putHeader("content-type",
-				 * "application/json") .end(new JsonObject().put("Message sent",
-				 * pc.getResultSb()) .encode()); }
-				 * 
-				 * 
-				 * rc.response() .putHeader("content-type", "application/json")
-				 * .end(reqJson.encode());
-                 */
+                String[] cmd = {PythonCaller.getContextPath() + "badimsicore_sms_sender.py", "-s", imsi, sender, msg};
+        		PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
+        			if(returnCode == 0) {
+        				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
+        				bufferedReader.lines().forEach(l -> {
+        					System.out.println(l);
+        				});	
+        			}
+        			else {
+        				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(error));
+        				bufferedReader.lines().forEach(l -> {
+        					System.out.println(l);
+        				});	
+        			}
+        		});
+        		
+        		try {
+        			pythonCaller.exec();
+        		}catch(IOException | InterruptedException ie) {
+        			System.out.println("File not found");
+        		}
             });
 
         });
