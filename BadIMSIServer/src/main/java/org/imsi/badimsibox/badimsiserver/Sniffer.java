@@ -18,16 +18,16 @@ import static org.imsi.badimsibox.badimsiserver.BadIMSIService.operatorList;
 
 public class Sniffer {
 
-    void function(JsonObject reqJson) {
+    JsonArray launch(JsonObject reqJson) throws InterruptedException, IOException {
 
         // retrieving the operator name from HTML page
         String operator = reqJson.getString("operator");
 
         // Calling python script to launch the sniffing
         String[] pythonLocationScript = {"badimsicore-listen.py", "-o", operator};
-        // -b => bande de fréquence ex : GSM800
-        // -t => temps de scan sur chaque fréquence
-        // -n => nombre de cycles de 
+        // -b => frequency band ex : GSM800
+        // -t => time to scan each frequency
+        // -n => number of cycle to scan frequencies
         
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
@@ -44,13 +44,7 @@ public class Sniffer {
             }
         });
         
-        try {
-            pc.exec();
-        } catch (IOException ex) {
-            Logger.getLogger(Sniffer.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Sniffer.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        pc.exec();
 
         JsonArray array = new JsonArray();
         operatorList.forEach(item -> {
@@ -68,5 +62,6 @@ public class Sniffer {
             jsonObject.put("ARFCNs", sb.toString());
             array.add(jsonObject);
         });
+        return array;
     }
 }
