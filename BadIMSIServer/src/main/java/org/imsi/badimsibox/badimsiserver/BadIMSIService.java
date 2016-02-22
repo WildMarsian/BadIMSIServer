@@ -231,68 +231,64 @@ public class BadIMSIService extends AbstractVerticle {
             final JsonObject reqJson = new JsonObject();
             final Map<String, String> params = new HashMap<>();
 
-            String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore_openbts.py", "start"};
-            PythonCaller pc = new PythonCaller(pythonLocationScript);
+            String[] pythonLocationScript = {"badimsicore_openbts.py", "start"};
 
-            int exitCode = -1;
+            PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+                // Creating answer for the client
+                rc.request().bodyHandler(h -> {
+                    parseJsonParams(params, reqJson, h);
+                    for (String key : params.keySet()) {
+                        reqJson.put(key, params.get(key));
+                    }
+                    if (returnCode != 0) {
+                        reqJson.put("openbts#state", "failed");
+                    } else {
+                        reqJson.put("openbts#state", "started");
+                    }
+                    rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
+                });
+            });
 
             try {
-                Process process = pc.process();
-                exitCode = process.exitValue();
-
+                pc.exec();
             } catch (IOException ex) {
+                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
                 Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            final int finalCode = exitCode;
-
-            // Creating answer for the client
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-                if (finalCode != 0) {
-                    reqJson.put("openbts#state", "failed");
-                } else {
-                    reqJson.put("openbts#state", "started");
-                }
-                rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
-            });
         });
 
         router.get("/master/fakebts/stop").handler(rc -> {
             final JsonObject reqJson = new JsonObject();
             final Map<String, String> params = new HashMap<>();
 
-            String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore_openbts.py", "stop"};
-            PythonCaller pc = new PythonCaller(pythonLocationScript);
+            String[] pythonLocationScript = {"badimsicore_openbts.py", "stop"};
 
-            int exitCode = -1;
+            PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+                // Creating answer for the client
+                rc.request().bodyHandler(h -> {
+                    parseJsonParams(params, reqJson, h);
+                    for (String key : params.keySet()) {
+                        reqJson.put(key, params.get(key));
+                    }
+                    if (returnCode == 0) {
+                        reqJson.put("openbts#state", "stopped");
+                    } else {
+                        reqJson.put("openbts#state", "critical");
+                    }
+                    rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
+                });
+            });
 
             try {
-                Process process = pc.process();
-                exitCode = process.exitValue();
+                pc.exec();
             } catch (IOException ex) {
+                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException ex) {
                 Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            final int finalCode = exitCode;
-
-            // Creating answer for the client
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-                if (finalCode == 0) {
-                    reqJson.put("openbts#state", "stopped");
-                } else {
-                    reqJson.put("openbts#state", "critical");
-                }
-
-                rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
-            });
         });
 
         router.post("/master/attack/sms/send/").handler(rc -> {
