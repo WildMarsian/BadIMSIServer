@@ -57,7 +57,7 @@ public class PythonCaller {
 		System.out.println("Error on the script : no script found for " + sb.toString());
 	}
 	
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) throws InterruptedException {
 		String[] cmd = {"./scripts/test.py", "-i", "file.input", "-o", "file.output"};
 		PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
 			if(returnCode == 0) {
@@ -74,6 +74,11 @@ public class PythonCaller {
 			}
 		});
 		
-		pythonCaller.exec();
+		try {
+			pythonCaller.exec();
+		}catch(IOException ie) {
+			System.out.println("File not found");
+		}
+		
 	}
 }
