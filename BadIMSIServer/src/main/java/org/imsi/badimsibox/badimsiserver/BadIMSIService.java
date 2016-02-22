@@ -81,22 +81,23 @@ public class BadIMSIService extends AbstractVerticle {
 */
     public void getAllSms() throws IOException {
    
-        String[] pythonLocationScript = {"/home/aisuko/Documents/LastProject/BadIMSI_Workspace/BadIMSIServer/BadIMSIServer/target/classes/badimsicore_sms_interceptor.py", "-i", "smqueue.txt"};
+        String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
         	if(returnCode == 0) {
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
 				bufferedReader.lines().forEach(l -> {
-					
-					//vertx.eventBus().publish("sms.new", sms.toJson());
-					System.out.println(l);
+					String removeParenthesis = l.replaceAll("[()]", "");
+					String[] splitted = removeParenthesis.split(",");
+					String first = splitted[0].replaceAll("['']", "");
+					String second = splitted[1].replaceAll("['']", "");
+					vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
 				});	
 			}
 		});
-		
 		try {
 			pc.exec();
 		}catch(IOException | InterruptedException ie) {
-			System.out.println("File error");
+			ie.printStackTrace();
 		}
     }
 

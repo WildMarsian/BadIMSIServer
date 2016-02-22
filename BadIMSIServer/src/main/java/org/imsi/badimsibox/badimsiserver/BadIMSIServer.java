@@ -1,6 +1,9 @@
 
 package org.imsi.badimsibox.badimsiserver;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import io.vertx.core.Vertx;
 
 public class BadIMSIServer {
@@ -20,6 +23,7 @@ public class BadIMSIServer {
 				// launch the service here
 				Thread.sleep(5000);
 				badIMSIService.getAllSms();
+				Files.delete(Paths.get("./scripts/smqueue.txt.offset"));
 				//badIMSIService.getTMSIs();
 			}
 		} catch (Exception e) {

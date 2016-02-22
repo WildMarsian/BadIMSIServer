@@ -9,6 +9,7 @@ import java.util.Objects;
 
 /**
  * Python Caller is a class that calls python code and return the process class
+ * On Maven, script path is along JAVA code source files, check execution rights!!
  */
 
 public class PythonCaller {
@@ -42,7 +43,7 @@ public class PythonCaller {
 		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream(), p.exitValue());
 	}
 
-	private static String getCleanPath() {
+	public static String getCleanPath() {
 		URL location = PythonCaller.class.getProtectionDomain().getCodeSource().getLocation();
 		String path = location.getFile();
 		return new File(path).getParent() + "/" + new File(path).getName();
