@@ -32,7 +32,7 @@ public class PythonCaller {
 		this.cmd = sb.toString();
 	}
 	
-	private void exec() throws IOException, InterruptedException {
+	public void exec() throws IOException, InterruptedException {
 		Runtime rt = Runtime.getRuntime();
 		Process p = rt.exec(cmd);
 		p.waitFor();
