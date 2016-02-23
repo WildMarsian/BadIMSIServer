@@ -30,7 +30,7 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultIpAndPorts = "*";
     static List<Bts> operatorList = new ArrayList<>();
     private Vertx vertx;
-    
+
     private Sniffer snifferHandler = null;
 
     public BadIMSIService(Vertx vertx) {
@@ -150,35 +150,92 @@ public class BadIMSIService extends AbstractVerticle {
                 for (String key : params.keySet()) {
                     reqJson.put(key, params.get(key));
                 }
-               
+
                 // retrieving the operator name from HTML page
                 String operator = reqJson.getString("operator");
-                
+
                 // Calling python script to launch the sniffing
                 String[] pythonLocationScript = {"./scripts/badimsicore_listen.py", "-o", operator};
 
                 snifferHandler = new Sniffer();
-                
+
                 boolean isOver = snifferHandler.start(reqJson, pythonLocationScript);
                 JsonObject answer = new JsonObject();
                 answer.put("started", !isOver);
                 rc.response().putHeader("content-type", "application/json").end(answer.encode());
             });
         });
-        
+
         router.route("/master/sniffing/status/").handler(rc -> {
-                String status = snifferHandler.status();
-                JsonObject answer = new JsonObject();
-                answer.put("status", status);
-                answer.put("error", snifferHandler.getError());
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            String status = snifferHandler.status();
+            JsonObject answer = new JsonObject();
+            answer.put("status", status);
+            answer.put("error", snifferHandler.getError());
+            rc.response().putHeader("content-type", "application/json").end(answer.encode());
         });
-        
+
         router.route("/master/sniffing/getData/").handler(rc -> {
-                JsonArray array = snifferHandler.getResult();
-                rc.response().putHeader("content-type", "application/json").end(array.encode());
+            JsonArray array = snifferHandler.getResult();
+            rc.response().putHeader("content-type", "application/json").end(array.encode());
         });
-        
+
+        router.post("/master/fakebts/start/").handler(rc -> {
+            final JsonObject reqJson = new JsonObject();
+            final Map<String, String> params = new HashMap<>();
+
+            rc.request().bodyHandler(h -> {
+                parseJsonParams(params, reqJson, h);
+                // Building the JSON on server side sent by client
+                for (String key : params.keySet()) {
+                    reqJson.put(key, params.get(key));
+                }
+
+                // retrieving the operator name from HTML page
+                String info = reqJson.getString("info");
+
+                // Calling python script to launch the sniffing
+                String[] pythonLocationScript = {"./badimsicore_openbts.py", "start"};
+
+                Thread thread = new Thread(() -> {
+                    PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+                        JsonObject answer = new JsonObject();
+                        answer.put("started", "started");
+                        rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                    });
+
+                    try {
+                        pc.exec();
+                    } catch (IOException | InterruptedException ex) {
+                        Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+                thread.start();
+            });
+        });
+
+        router.get("/master/fakebts/stop").handler(rc -> {
+            rc.request().bodyHandler(h -> {
+
+                // Calling python script to launch the sniffing
+                String[] pythonLocationScript = {"./badimsicore_openbts.py", "stop"};
+
+                Thread thread = new Thread(() -> {
+                    PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+                        JsonObject answer = new JsonObject();
+                        answer.put("started", "started");
+                        rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                    });
+
+                    try {
+                        pc.exec();
+                    } catch (IOException | InterruptedException ex) {
+                        Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+                thread.start();
+            });
+        });
+
         // return the list of all BTS discovered in the sniffing step
         router.route("/master/jamming/operator/").handler(rc -> {
             JsonArray array = new JsonArray();
@@ -233,66 +290,6 @@ public class BadIMSIService extends AbstractVerticle {
 			 * "application/json") .end(new JsonObject().put("jamming",
 			 * pc.getResultSb()) .encode()); }
              */
-        });
-
-        router.post("/master/fakebts/start/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            String[] pythonLocationScript = {"./badimsicore_openbts.py", "start"};
-
-            PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-                // Creating answer for the client
-                rc.request().bodyHandler(h -> {
-                    parseJsonParams(params, reqJson, h);
-                    for (String key : params.keySet()) {
-                        reqJson.put(key, params.get(key));
-                    }
-                    if (returnCode != 0) {
-                        reqJson.put("openbts#state", "failed");
-                    } else {
-                        reqJson.put("openbts#state", "started");
-                    }
-                    rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
-                });
-            });
-
-            try {
-                pc.exec();
-            } catch (IOException | InterruptedException ex) {
-                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-        });
-
-        router.get("/master/fakebts/stop").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            String[] pythonLocationScript = {"./scripts/badimsicore_openbts.py", "stop"};
-
-            PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-                // Creating answer for the client
-                rc.request().bodyHandler(h -> {
-                    parseJsonParams(params, reqJson, h);
-                    for (String key : params.keySet()) {
-                        reqJson.put(key, params.get(key));
-                    }
-                    if (returnCode == 0) {
-                        reqJson.put("openbts#state", "stopped");
-                    } else {
-                        reqJson.put("openbts#state", "critical");
-                    }
-                    rc.response().putHeader("content-type", "application/json").end(reqJson.encode());
-                });
-            });
-
-            try {
-                pc.exec();
-            } catch (IOException | InterruptedException ex) {
-                Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
         });
 
         router.post("/master/attack/sms/send/").handler(rc -> {
