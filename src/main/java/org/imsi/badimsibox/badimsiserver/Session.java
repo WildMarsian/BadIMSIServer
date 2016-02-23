@@ -2,19 +2,24 @@ package org.imsi.badimsibox.badimsiserver;
 
 import java.util.Date;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+
 public class Session {
 	private int state;
 	private final String password;
 	private int timestamp;
+	private Vertx vertx;
 
-	public Session(String password) {
+	public Session(String password, Vertx vertx) {
 		this.password = password;
 		this.state = 0;
 		this.timestamp = 0;
+		this.vertx = vertx;
 	}
 
-	public static Session init() {
-		Session init = new Session("");
+	public static Session init(Vertx vertx) {
+		Session init = new Session("", vertx);
 		return init;
 	}
 
@@ -29,6 +34,8 @@ public class Session {
 	public void nextSessionState() {
 		this.state++;
 		System.out.println(new Date() + ": Next sesssion state: " + this.state);
+		JsonObject json = new JsonObject().put("state", this.state);
+		this.vertx.eventBus().publish("session.new", json.encode());
 	}
 
 	public String getPassword() {

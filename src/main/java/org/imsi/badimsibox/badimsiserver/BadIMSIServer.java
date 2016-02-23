@@ -22,7 +22,7 @@ public class BadIMSIServer {
 			while (!Thread.interrupted()) {
 				// launch the service here
 				Thread.sleep(5000);
-				badIMSIService.getAllSms();
+				//badIMSIService.getAllSms();
 				//badIMSIService.getTMSIs();
 			}
 		} catch (Exception e) {

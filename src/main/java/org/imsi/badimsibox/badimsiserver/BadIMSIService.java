@@ -24,12 +24,13 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 public class BadIMSIService extends AbstractVerticle {
 
-    private Session currentSession = Session.init();
+    
     static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
     static List<Bts> operatorList = new ArrayList<>();
     private Vertx vertx;
+    private Session currentSession = Session.init(vertx);
 
     private Sniffer snifferHandler = null;
 
@@ -114,7 +115,7 @@ public class BadIMSIService extends AbstractVerticle {
         router.get("/master/session/start/:password").handler(rc -> {
             String password = rc.request().getParam("password");
             System.out.println(new Date() + ": Starting a session");
-            this.currentSession = new Session(password);
+            this.currentSession = new Session(password, vertx);
             this.currentSession.updateTimestamp();
             rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("started", true).encode());
 
