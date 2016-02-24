@@ -46,7 +46,7 @@ public class PythonCaller {
 	}
 	
 	public void process() {
-		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream(), p.exitValue());
+		actionHandler.accept(p.getInputStream(), p.getOutputStream(), p.getErrorStream());
 	}
  
 	public static String getCleanPath() {
@@ -68,7 +68,8 @@ public class PythonCaller {
 	}
 	
 	public static void main(String[] args) throws InterruptedException {
-		String[] cmd = {"./scripts/test.py", "-i", "file.input", "-o", "file.output"};
+            // TODO
+		/*String[] cmd = {"./scripts/test.py", "-i", "file.input", "-o", "file.output"};
 		PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
 			if(returnCode == 0) {
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
@@ -88,7 +89,7 @@ public class PythonCaller {
 			pythonCaller.exec();
 		}catch(IOException ie) {
 			System.out.println("File not found");
-		}
+		}*/
 		
 	}
 }
