@@ -34,7 +34,9 @@ public class Session {
 	public void nextSessionState() {
 		this.state++;
 		System.out.println(new Date() + ": Next sesssion state: " + this.state);
-		JsonObject json = new JsonObject().put("state", this.state);
+		JsonObject json = new JsonObject();
+		json.put("state", new String(Integer.toString(this.state)));
+		System.out.println("Data sent to observer: " + json.encode());
 		this.vertx.eventBus().publish("session.new", json.encode());
 	}
 

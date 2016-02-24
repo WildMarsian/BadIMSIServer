@@ -140,6 +140,22 @@ public class BadIMSIService extends AbstractVerticle {
                 rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", false).encode());
             }
         });
+        
+        router.post("/master/sniffing/selectOperator/").handler(rc -> {
+        	final JsonObject reqJson = new JsonObject();
+        	final Map<String, String> params = new HashMap<>();
+        	rc.request().bodyHandler(h -> {
+        		parseJsonParams(params, reqJson, h);
+        		for(String key : params.keySet()) {
+        			reqJson.put(key, params.get(key));
+        		}
+        		String operator = reqJson.getString("operator");
+        		JsonObject json = new JsonObject();
+        		json.put("operator", operator);
+        		this.vertx.eventBus().publish("observer.new", json.encode());
+        		rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+        	});
+        });
 
         router.post("/master/sniffing/start/").handler(rc -> {
             final JsonObject reqJson = new JsonObject();
@@ -163,6 +179,8 @@ public class BadIMSIService extends AbstractVerticle {
                 boolean isOver = snifferHandler.start(reqJson, pythonLocationScript);
                 JsonObject answer = new JsonObject();
                 answer.put("started", !isOver);
+                JsonObject observer = new JsonObject().put("startedSniffing", true);
+                this.vertx.eventBus().publish("observer.new", observer.encode());
                 rc.response().putHeader("content-type", "application/json").end(answer.encode());
             });
         });
@@ -172,6 +190,7 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject answer = new JsonObject();
             answer.put("status", status);
             answer.put("error", snifferHandler.getError());
+            this.vertx.eventBus().publish("observer.new", answer.encode());
             rc.response().putHeader("content-type", "application/json").end(answer.encode());
         });
 
