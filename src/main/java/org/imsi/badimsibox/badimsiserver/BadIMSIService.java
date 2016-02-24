@@ -8,8 +8,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
@@ -82,6 +80,22 @@ public class BadIMSIService extends AbstractVerticle {
     public void getAllSms() throws IOException {
 
         String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
+
+        ArrayList<Sms> smsList = new ArrayList<>();
+
+        PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+            bufferedReader.lines().forEach(l -> {
+                String removeParenthesis = l.replaceAll("[()]", "");
+                String[] splitted = removeParenthesis.split(",");
+                String first = splitted[0].replaceAll("['']", "");
+                String second = splitted[1].replaceAll("['']", "");
+                smsList.add(new Sms(first, second));
+            });
+        });
+
+        vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
+
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
             if (returnCode == 0) {
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
@@ -173,27 +187,11 @@ public class BadIMSIService extends AbstractVerticle {
                 // Calling python script to launch the sniffing
                 String[] pythonLocationScript = {"./scripts/badimsicore_listen.py", "-o", operator};
 
+                // starting sniffing thread
                 snifferHandler = new Sniffer();
                 snifferHandler.start(pythonLocationScript);
 
-                /*JsonArray array = new JsonArray();
-
-                operatorList.forEach(item -> {
-                    JsonObject jsonObject = new JsonObject();
-                    jsonObject.put("Network", item.getOperatorByMnc());
-                    jsonObject.put("MCC", item.getOperator().getMcc());
-                    jsonObject.put("LAC", item.getLac());
-                    jsonObject.put("CI", item.getCi());
-                    StringBuilder sb = new StringBuilder();
-                    item.getArfcn().forEach(arfcn -> {
-                        sb.append(arfcn);
-                        sb.append(", ");
-                    });
-                    sb.delete(sb.length() - 1, sb.length());
-                    jsonObject.put("ARFCNs", sb.toString());
-                    array.add(jsonObject);
-                });*/
-                
+                // creating answer for web interface
                 JsonObject answer = new JsonObject();
                 boolean isRunning = snifferHandler.isRunning();
                 answer.put("started", isRunning);
@@ -204,19 +202,40 @@ public class BadIMSIService extends AbstractVerticle {
         });
 
         router.route("/master/sniffing/status/").handler(rc -> {
-            String status = snifferHandler.status();
+            String currentStatus = snifferHandler.getStatusType();
             JsonObject answer = new JsonObject();
-            answer.put("status", status);
-            answer.put("error", snifferHandler.getError());
+            answer.put("status", currentStatus);
+            String errorMessage = snifferHandler.getError();
+            if (errorMessage == null) {
+                answer.put("error", "");
+            } else {
+                answer.put("error", snifferHandler.getError());
+            }
             this.vertx.eventBus().publish("observer.new", answer.encode());
             rc.response().putHeader("content-type", "application/json").end(answer.encode());
         });
 
         router.route("/master/sniffing/getData/").handler(rc -> {
-            JsonArray array = snifferHandler.getResult();
+            operatorList = snifferHandler.getResult();
+            JsonArray array = new JsonArray();
+            operatorList.forEach(item -> {
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.put("Network", item.getOperatorByMnc());
+                jsonObject.put("MCC", item.getOperator().getMcc());
+                jsonObject.put("LAC", item.getLac());
+                jsonObject.put("CI", item.getCi());
+                StringBuilder sb = new StringBuilder();
+                item.getArfcn().forEach(arfcn -> {
+                    sb.append(arfcn);
+                    sb.append(", ");
+                });
+                sb.delete(sb.length() - 1, sb.length());
+                jsonObject.put("ARFCNs", sb.toString());
+                array.add(jsonObject);
+            });
             rc.response().putHeader("content-type", "application/json").end(array.encode());
         });
-        
+
         router.route("/master/fakebts/getData/").handler(rc -> {
             JsonArray array = new JsonArray();
             JsonObject jsonObject = new JsonObject();
@@ -243,21 +262,21 @@ public class BadIMSIService extends AbstractVerticle {
             this.vertx.eventBus().publish("observer.new", array.encode());
             rc.response().putHeader("content-type", "application/json").end(array.encode());
         });
-        
+
         router.post("/master/fakebts/selectOperator/").handler(rc -> {
-        	final JsonObject reqJson = new JsonObject();
-        	final Map<String, String> params = new HashMap<>();
-        	rc.request().bodyHandler(h -> {
-        		parseJsonParams(params, reqJson, h);
-        		for(String key : params.keySet()) {
-        			reqJson.put(key, params.get(key));
-        		}
-        		String operator = reqJson.getString("operator");
-        		JsonObject json = new JsonObject();
-        		json.put("operator", operator);
-        		this.vertx.eventBus().publish("observer.new", json.encode());
-        		rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
-        	});
+            final JsonObject reqJson = new JsonObject();
+            final Map<String, String> params = new HashMap<>();
+            rc.request().bodyHandler(h -> {
+                parseJsonParams(params, reqJson, h);
+                for (String key : params.keySet()) {
+                    reqJson.put(key, params.get(key));
+                }
+                String operator = reqJson.getString("operator");
+                JsonObject json = new JsonObject();
+                json.put("operator", operator);
+                this.vertx.eventBus().publish("observer.new", json.encode());
+                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+            });
         });
 
         router.post("/master/fakebts/start/").handler(rc -> {
@@ -272,49 +291,39 @@ public class BadIMSIService extends AbstractVerticle {
                     System.out.println(key + " " + params.get(key));
                 }
 
-                // retrieving the operator name from HTML page
-                String info = reqJson.getString("info");
-
                 // Calling python script to launch the sniffing
                 String[] pythonLocationScript = {"./badimsicore_openbts.py", "start"};
 
-                Thread thread = new Thread(() -> {
-                    PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-                        JsonObject answer = new JsonObject();
-                        answer.put("started", "started");
-                        rc.response().putHeader("content-type", "application/json").end(answer.encode());
-                    });
-
-                    try {
-                        pc.exec();
-                    } catch (IOException | InterruptedException ex) {
-                        Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
+                    JsonObject answer = new JsonObject();
+                    answer.put("started", "started");
+                    rc.response().putHeader("content-type", "application/json").end(answer.encode());
                 });
-                thread.start();
+                handler.start();
             });
         });
 
-        router.get("/master/fakebts/stop").handler(rc -> {
+        router.post("/master/fakebts/stop/").handler(rc -> {
+            final JsonObject reqJson = new JsonObject();
+            final Map<String, String> params = new HashMap<>();
+
             rc.request().bodyHandler(h -> {
+                parseJsonParams(params, reqJson, h);
+                // Building the JSON on server side sent by client
+                for (String key : params.keySet()) {
+                    reqJson.put(key, params.get(key));
+                    System.out.println(key + " " + params.get(key));
+                }
 
                 // Calling python script to launch the sniffing
                 String[] pythonLocationScript = {"./badimsicore_openbts.py", "stop"};
 
-                Thread thread = new Thread(() -> {
-                    PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-                        JsonObject answer = new JsonObject();
-                        answer.put("started", "started");
-                        rc.response().putHeader("content-type", "application/json").end(answer.encode());
-                    });
-
-                    try {
-                        pc.exec();
-                    } catch (IOException | InterruptedException ex) {
-                        Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
+                    JsonObject answer = new JsonObject();
+                    answer.put("started", "started");
+                    rc.response().putHeader("content-type", "application/json").end(answer.encode());
                 });
-                thread.start();
+                handler.start();
             });
         });
 

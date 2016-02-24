@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 
 public class PythonHandler {
     public static enum HandlerState {
-        INIT, RUN, ERROR, STOPPED
+        init, inProgress, error, finished
     }
     public final static int PROCESSRUNNING = -1;
 
@@ -15,7 +15,7 @@ public class PythonHandler {
     private final PythonActionHandler actionHandler;
     private final String commandToExec;
 
-    private HandlerState currentState = HandlerState.INIT;
+    private HandlerState currentState = HandlerState.init;
     private Exception exceptionError = null;
     private int processExitValue = PROCESSRUNNING;
     private Thread thread = null;
@@ -54,18 +54,18 @@ public class PythonHandler {
                 synchronized (lock) {
                     Logger.getLogger(PythonHandler.class.getName()).log(Level.SEVERE, null, ex);
                     exceptionError = ex;
-                    currentState = HandlerState.ERROR;
+                    currentState = HandlerState.error;
                     return;
                 }
             }
             synchronized(lock) {
                 processExitValue = p.exitValue();
-                currentState = HandlerState.STOPPED;
+                currentState = HandlerState.finished;
             }
         });
         thread.start();
         synchronized (lock) {
-            currentState = HandlerState.RUN;
+            currentState = HandlerState.inProgress;
         }
     }
 

@@ -5,5 +5,6 @@ import java.io.OutputStream;
 
 @FunctionalInterface
 public interface PythonActionHandler {
+
     public void accept(InputStream stdin, OutputStream stdout, InputStream inputStream);
 }

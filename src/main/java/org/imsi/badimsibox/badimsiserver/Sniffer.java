@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.imsi.badimsibox.badimsiserver;
 
 import java.io.BufferedReader;
@@ -47,26 +42,34 @@ public class Sniffer {
     }
 
     /**
-     * 
-     * @return 
+     *
+     * @return
      */
     public boolean isRunning() {
         return handler.getExitValue() == PythonHandler.PROCESSRUNNING;
     }
 
     /**
-     * 
-     * @return 
+     *
+     * @return
      */
     public boolean hasFailed() {
-        return handler.getState() == PythonHandler.HandlerState.ERROR;
+        return handler.getState() == PythonHandler.HandlerState.error;
     }
 
     /**
-     * 
+     *
      * @return
      */
     public String getError() {
         return handler.getError().getMessage();
+    }
+
+    /**
+     *
+     * @return
+     */
+    public String getStatusType() {
+        return handler.getState().toString();
     }
 }
