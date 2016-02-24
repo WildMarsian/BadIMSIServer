@@ -41,7 +41,7 @@ public class PythonHandler {
     }
 
     /**
-     *
+     * 
      */
     public void start() {
         thread = new Thread(() -> {

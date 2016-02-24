@@ -10,15 +10,18 @@ import java.util.List;
 import java.util.Map;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BadIMSIService extends AbstractVerticle {
 
@@ -26,14 +29,10 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
     static List<Bts> operatorList = new ArrayList<>();
-    private Vertx vertx;
     private Session currentSession = Session.init(vertx);
+    private PythonManager pythonManager = new PythonManager();
 
     private Sniffer snifferHandler = null;
-
-    public BadIMSIService(Vertx vertx) {
-        this.vertx = vertx;
-    }
 
     private void parseJsonParams(Map<String, String> params, JsonObject reqJson, Buffer h) {
         String bufferMessage = h.toString();
@@ -74,27 +73,14 @@ public class BadIMSIService extends AbstractVerticle {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
     }
      */
     public void getAllSms() throws IOException {
+        /* TODO make objects to launch the SMSReader in another thread. 
+            One route to launch and another to get the current status. The last to get all data readed*/
 
+ /*
         String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
-
-        ArrayList<Sms> smsList = new ArrayList<>();
-
-        PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-            bufferedReader.lines().forEach(l -> {
-                String removeParenthesis = l.replaceAll("[()]", "");
-                String[] splitted = removeParenthesis.split(",");
-                String first = splitted[0].replaceAll("['']", "");
-                String second = splitted[1].replaceAll("['']", "");
-                smsList.add(new Sms(first, second));
-            });
-        });
-
-        vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
 
         PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
             if (returnCode == 0) {
@@ -108,11 +94,12 @@ public class BadIMSIService extends AbstractVerticle {
                 });
             }
         });
+        
         try {
             pc.exec();
         } catch (IOException | InterruptedException ie) {
             ie.printStackTrace();
-        }
+        }*/
     }
 
     @Override
@@ -131,11 +118,9 @@ public class BadIMSIService extends AbstractVerticle {
             this.currentSession = new Session(password, vertx);
             this.currentSession.updateTimestamp();
             rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("started", true).encode());
-
         });
 
         router.get("/master/session/state").handler(rc -> {
-
             if (this.currentSession == null) {
                 rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", -1).encode());
             } else {
@@ -170,71 +155,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
         });
 
-        router.post("/master/sniffing/start/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                // Building the JSON on server side sent by client
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-
-                // retrieving the operator name from HTML page
-                String operator = reqJson.getString("operator");
-
-                // Calling python script to launch the sniffing
-                String[] pythonLocationScript = {"./scripts/badimsicore_listen.py", "-o", operator};
-
-                // starting sniffing thread
-                snifferHandler = new Sniffer();
-                snifferHandler.start(pythonLocationScript);
-
-                // creating answer for web interface
-                JsonObject answer = new JsonObject();
-                boolean isRunning = snifferHandler.isRunning();
-                answer.put("started", isRunning);
-                JsonObject observer = new JsonObject().put("startedSniffing", true);
-                this.vertx.eventBus().publish("observer.new", observer.encode());
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
-            });
-        });
-
-        router.route("/master/sniffing/status/").handler(rc -> {
-            String currentStatus = snifferHandler.getStatusType();
-            JsonObject answer = new JsonObject();
-            answer.put("status", currentStatus);
-            String errorMessage = snifferHandler.getError();
-            if (errorMessage == null) {
-                answer.put("error", "");
-            } else {
-                answer.put("error", snifferHandler.getError());
-            }
-            this.vertx.eventBus().publish("observer.new", answer.encode());
-            rc.response().putHeader("content-type", "application/json").end(answer.encode());
-        });
-
-        router.route("/master/sniffing/getData/").handler(rc -> {
-            operatorList = snifferHandler.getResult();
-            JsonArray array = new JsonArray();
-            operatorList.forEach(item -> {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.put("Network", item.getOperatorByMnc());
-                jsonObject.put("MCC", item.getOperator().getMcc());
-                jsonObject.put("LAC", item.getLac());
-                jsonObject.put("CI", item.getCi());
-                StringBuilder sb = new StringBuilder();
-                item.getArfcn().forEach(arfcn -> {
-                    sb.append(arfcn);
-                    sb.append(", ");
-                });
-                sb.delete(sb.length() - 1, sb.length());
-                jsonObject.put("ARFCNs", sb.toString());
-                array.add(jsonObject);
-            });
-            rc.response().putHeader("content-type", "application/json").end(array.encode());
-        });
+        router.post("/master/sniffing/start/").handler(this::startSniffing);
 
         router.route("/master/fakebts/getData/").handler(rc -> {
             JsonArray array = new JsonArray();
@@ -426,5 +347,66 @@ public class BadIMSIService extends AbstractVerticle {
 
         router.route().handler(StaticHandler.create());
         vertx.createHttpServer().requestHandler(router::accept).listen(8080);
+    }
+
+    private void startSniffing(RoutingContext rc) {
+
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            // Building the JSON on server side sent by client
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+
+            // retrieving the operator name from HTML page
+            String operator = reqJson.getString("operator");
+            String command = "badimsicore_listen -o " + operator;
+
+            // Blocking code
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(",")).forEach((tab) -> {
+                    List<String> arfcns = new ArrayList<>(tab.length - 4);
+                    for (int i = 4; i < tab.length; i++) {
+                        arfcns.add(tab[i]);
+                    }
+                    operatorList.add(new Bts(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
+                });
+
+                JsonArray array = new JsonArray();
+                operatorList.forEach(item -> {
+                    JsonObject jsonObject = new JsonObject();
+                    jsonObject.put("Network", item.getOperatorByMnc());
+                    jsonObject.put("MCC", item.getOperator().getMcc());
+                    jsonObject.put("LAC", item.getLac());
+                    jsonObject.put("CI", item.getCi());
+                    StringBuilder sb = new StringBuilder();
+                    item.getArfcn().forEach(arfcn -> {
+                        sb.append(arfcn);
+                        sb.append(", ");
+                    });
+                    sb.delete(sb.length() - 1, sb.length());
+                    jsonObject.put("ARFCNs", sb.toString());
+                    array.add(jsonObject);
+                });
+                rc.response().putHeader("content-type", "application/json").end(array.encode());
+            });
+        });
+
     }
 }

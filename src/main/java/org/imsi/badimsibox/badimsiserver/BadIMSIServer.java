@@ -6,7 +6,7 @@ public class BadIMSIServer {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
-        BadIMSIService badIMSIService = new BadIMSIService(vertx);
+        BadIMSIService badIMSIService = new BadIMSIService();
         vertx.deployVerticle(badIMSIService);
     }
 }
