@@ -24,7 +24,6 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 public class BadIMSIService extends AbstractVerticle {
 
-    
     static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
@@ -140,21 +139,21 @@ public class BadIMSIService extends AbstractVerticle {
                 rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", false).encode());
             }
         });
-        
+
         router.post("/master/sniffing/selectOperator/").handler(rc -> {
-        	final JsonObject reqJson = new JsonObject();
-        	final Map<String, String> params = new HashMap<>();
-        	rc.request().bodyHandler(h -> {
-        		parseJsonParams(params, reqJson, h);
-        		for(String key : params.keySet()) {
-        			reqJson.put(key, params.get(key));
-        		}
-        		String operator = reqJson.getString("operator");
-        		JsonObject json = new JsonObject();
-        		json.put("operator", operator);
-        		this.vertx.eventBus().publish("observer.new", json.encode());
-        		rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
-        	});
+            final JsonObject reqJson = new JsonObject();
+            final Map<String, String> params = new HashMap<>();
+            rc.request().bodyHandler(h -> {
+                parseJsonParams(params, reqJson, h);
+                for (String key : params.keySet()) {
+                    reqJson.put(key, params.get(key));
+                }
+                String operator = reqJson.getString("operator");
+                JsonObject json = new JsonObject();
+                json.put("operator", operator);
+                this.vertx.eventBus().publish("observer.new", json.encode());
+                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+            });
         });
 
         router.post("/master/sniffing/start/").handler(rc -> {
@@ -175,10 +174,29 @@ public class BadIMSIService extends AbstractVerticle {
                 String[] pythonLocationScript = {"./scripts/badimsicore_listen.py", "-o", operator};
 
                 snifferHandler = new Sniffer();
+                snifferHandler.start(pythonLocationScript);
 
-                boolean isOver = snifferHandler.start(reqJson, pythonLocationScript);
+                /*JsonArray array = new JsonArray();
+
+                operatorList.forEach(item -> {
+                    JsonObject jsonObject = new JsonObject();
+                    jsonObject.put("Network", item.getOperatorByMnc());
+                    jsonObject.put("MCC", item.getOperator().getMcc());
+                    jsonObject.put("LAC", item.getLac());
+                    jsonObject.put("CI", item.getCi());
+                    StringBuilder sb = new StringBuilder();
+                    item.getArfcn().forEach(arfcn -> {
+                        sb.append(arfcn);
+                        sb.append(", ");
+                    });
+                    sb.delete(sb.length() - 1, sb.length());
+                    jsonObject.put("ARFCNs", sb.toString());
+                    array.add(jsonObject);
+                });*/
+                
                 JsonObject answer = new JsonObject();
-                answer.put("started", !isOver);
+                boolean isRunning = snifferHandler.isRunning();
+                answer.put("started", isRunning);
                 JsonObject observer = new JsonObject().put("startedSniffing", true);
                 this.vertx.eventBus().publish("observer.new", observer.encode());
                 rc.response().putHeader("content-type", "application/json").end(answer.encode());

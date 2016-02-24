@@ -1,6 +1,3 @@
-/*
- * All rights reserved to WarenUT Github user
- */
 package org.imsi.badimsibox.badimsiserver;
 
 import java.io.IOException;
@@ -96,7 +93,7 @@ public class PythonHandler {
      *
      * @return
      */
-    public HandlerState state() {
+    public HandlerState getState() {
         synchronized (lock) {
             return currentState;
         }
