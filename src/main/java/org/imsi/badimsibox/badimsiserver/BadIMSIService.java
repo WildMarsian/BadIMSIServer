@@ -216,6 +216,49 @@ public class BadIMSIService extends AbstractVerticle {
             JsonArray array = snifferHandler.getResult();
             rc.response().putHeader("content-type", "application/json").end(array.encode());
         });
+        
+        router.route("/master/fakebts/getData/").handler(rc -> {
+            JsonArray array = new JsonArray();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 208);
+            jsonObject.put("LAC", 101);
+            jsonObject.put("CI", 10);
+            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 208);
+            jsonObject.put("LAC", 101);
+            jsonObject.put("CI", 11);
+            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 208);
+            jsonObject.put("LAC", 101);
+            jsonObject.put("CI", 12);
+            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
+            array.add(jsonObject);
+            this.vertx.eventBus().publish("observer.new", array.encode());
+            rc.response().putHeader("content-type", "application/json").end(array.encode());
+        });
+        
+        router.post("/master/fakebts/selectOperator/").handler(rc -> {
+        	final JsonObject reqJson = new JsonObject();
+        	final Map<String, String> params = new HashMap<>();
+        	rc.request().bodyHandler(h -> {
+        		parseJsonParams(params, reqJson, h);
+        		for(String key : params.keySet()) {
+        			reqJson.put(key, params.get(key));
+        		}
+        		String operator = reqJson.getString("operator");
+        		JsonObject json = new JsonObject();
+        		json.put("operator", operator);
+        		this.vertx.eventBus().publish("observer.new", json.encode());
+        		rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+        	});
+        });
 
         router.post("/master/fakebts/start/").handler(rc -> {
             final JsonObject reqJson = new JsonObject();
@@ -226,6 +269,7 @@ public class BadIMSIService extends AbstractVerticle {
                 // Building the JSON on server side sent by client
                 for (String key : params.keySet()) {
                     reqJson.put(key, params.get(key));
+                    System.out.println(key + " " + params.get(key));
                 }
 
                 // retrieving the operator name from HTML page
