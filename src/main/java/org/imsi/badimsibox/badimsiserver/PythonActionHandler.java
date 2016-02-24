@@ -4,5 +4,5 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public interface PythonActionHandler {
-	public void accept(InputStream stdin, OutputStream stdout, InputStream inputStream, int returnCode);
+    public void accept(InputStream stdin, OutputStream stdout, InputStream inputStream);
 }
