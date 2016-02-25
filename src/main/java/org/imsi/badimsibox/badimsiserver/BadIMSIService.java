@@ -74,6 +74,7 @@ public class BadIMSIService extends AbstractVerticle {
 
         // Sniffing
         router.post("/master/sniffing/selectOperator/").handler(this::selectOperatorToSniff);
+        router.post("/master/sniffing/selectBand/").handler(this::selectBandToSniff);
         router.post("/master/sniffing/start/").handler(this::startSniffing);
 
         // OpenBTS
@@ -169,6 +170,29 @@ public class BadIMSIService extends AbstractVerticle {
             );
         });
     }
+    
+    /**
+    *
+    * @param rc
+    */
+   private void selectBandToSniff(RoutingContext rc) {
+       final JsonObject reqJson = new JsonObject();
+       final Map<String, String> params = new HashMap<>();
+       rc.request().bodyHandler(h -> {
+           parseJsonParams(params, h);
+           params.keySet().stream().forEach((key) -> {
+               reqJson.put(key, params.get(key));
+           });
+
+           String operator = reqJson.getString("band");
+           JsonObject json = new JsonObject();
+           json.put("band", operator);
+           this.vertx.eventBus().publish("observer.new", json.encode());
+           rc.response().putHeader("content-type", "application/json").end(
+                   new JsonObject().put("selectReceived", true).encode()
+           );
+       });
+   }
 
     /**
      *
