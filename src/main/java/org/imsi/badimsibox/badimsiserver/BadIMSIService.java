@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -20,7 +21,6 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import java.io.InputStream;
 import java.util.LinkedList;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,8 +36,8 @@ public class BadIMSIService extends AbstractVerticle {
 
     private final PythonManager pythonManager = new PythonManager();
     private final ArrayList<Bts> operatorList = new ArrayList<>();
-    private Session currentSession = Session.init(vertx);
 
+    private Session currentSession = Session.init(vertx);
     private LinkedList<String> command = null;
 
     /**
@@ -82,7 +82,7 @@ public class BadIMSIService extends AbstractVerticle {
         // OpenBTS
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
-        router.route("/master/fakebts/getBTSList/").handler(this::getMockBTSList);
+        router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -105,7 +105,6 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void startSession(RoutingContext rc) {
         String password = rc.request().getParam("password");
-        //System.out.println(new Date() + ": Starting a session");
         this.currentSession = new Session(password, vertx);
         this.currentSession.updateTimestamp();
         rc.response().putHeader("content-type", "application/json").end(
@@ -151,7 +150,7 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
-     * 
+     *
      * @param rc
      */
     private void selectOperatorToSniff(RoutingContext rc) {
@@ -205,21 +204,15 @@ public class BadIMSIService extends AbstractVerticle {
 
             // Blocking code
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[]) command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor();
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 if (res.succeeded()) {
                     Process p = (Process) res.result();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(","))
+                    BufferedReader br
+                            = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    br.lines().filter(line -> line.startsWith("->"))
+                            .map(line -> line.split(","))
                             .forEach((tab) -> {
                                 List<String> arfcns = new ArrayList<>(tab.length - 4);
                                 for (int i = 4; i < tab.length; i++) {
@@ -228,29 +221,16 @@ public class BadIMSIService extends AbstractVerticle {
                                 operatorList.add(new Bts(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
                             });
                     answer.put("status", "data");
-                    JsonArray array = new JsonArray();
-                    operatorList.forEach(bts -> {
-                        JsonObject tab = new JsonObject();
-                        tab.put("Network", bts.getOperatorByMnc());
-                        tab.put("MCC", bts.getOperator().getMcc());
-                        tab.put("LAC", bts.getLac());
-                        tab.put("CI", bts.getCi());
-                        StringBuilder sb = new StringBuilder();
-                        bts.getArfcn().forEach(arfcn -> {
-                            sb.append(arfcn);
-                            sb.append(", ");
-                        });
-                        sb.delete(sb.length() - 2, sb.length());
-                        tab.put("ARFCNs", sb.toString());
-                        array.add(tab);
-                    });
+                    JsonArray array = extractAndFormatBtsList();
                     answer.put("content", array);
                 } else {
                     answer.put("status", "error");
                     answer.put("content", res.cause().getMessage());
                 }
                 this.vertx.eventBus().publish("observer.new", answer.encode());
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -268,21 +248,13 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            
+
             command = new LinkedList<>();
             command.add("jamming");
             command.add("start");
 
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 answer.put("started", res.succeeded());
@@ -301,22 +273,7 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void selectOperatorToJamm(RoutingContext rc) {
-        JsonArray array = new JsonArray();
-        operatorList.forEach(item -> {
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.put("Network", item.getOperatorByMnc());
-            jsonObject.put("MCC", item.getOperator().getMcc());
-            jsonObject.put("LAC", item.getLac());
-            jsonObject.put("CI", item.getCi());
-            StringBuilder sb = new StringBuilder();
-            item.getArfcn().forEach(arfcn -> {
-                sb.append(arfcn);
-                sb.append(", ");
-            });
-            sb.delete(sb.length() - 1, sb.length());
-            jsonObject.put("ARFCNs", sb.toString());
-            array.add(jsonObject);
-        });
+        JsonArray array = extractAndFormatBtsList();
         rc.response().putHeader("content-type", "application/json").end(
                 array.encode()
         );
@@ -335,21 +292,13 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            
+
             command = new LinkedList<>();
             command.add("jamming");
             command.add("stop");
 
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 answer.put("stopped", res.succeeded());
@@ -373,25 +322,16 @@ public class BadIMSIService extends AbstractVerticle {
 
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            // Building the JSON on server side sent by client
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            
+
             command = new LinkedList<>();
             command.add("badimsicore_openbts");
             command.add("start");
 
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 answer.put("started", res.succeeded());
@@ -410,50 +350,7 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void getBTSList(RoutingContext rc) {
-        JsonArray array = new JsonArray();
-        operatorList.forEach(item -> {
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.put("Network", item.getOperatorByMnc());
-            jsonObject.put("MCC", item.getOperator().getMcc());
-            jsonObject.put("LAC", item.getLac());
-            jsonObject.put("CI", item.getCi());
-            StringBuilder sb = new StringBuilder();
-            item.getArfcn().forEach(arfcn -> {
-                sb.append(arfcn);
-                sb.append(", ");
-            });
-            sb.delete(sb.length() - 2, sb.length());
-            jsonObject.put("ARFCNs", sb.toString());
-            array.add(jsonObject);
-        });
-        rc.response().putHeader("content-type", "application/json").end(
-                array.encode()
-        );
-    }
-
-    private void getMockBTSList(RoutingContext rc) {
-        JsonArray array = new JsonArray();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.put("Network", "Orange");
-        jsonObject.put("MCC", 208);
-        jsonObject.put("LAC", 1010);
-        jsonObject.put("CI", 38);
-        jsonObject.put("ARFCNs", "20, 54, 23, 150");
-        array.add(jsonObject);
-        jsonObject = new JsonObject();
-        jsonObject.put("Network", "Orange");
-        jsonObject.put("MCC", 207);
-        jsonObject.put("LAC", 1010);
-        jsonObject.put("CI", 308);
-        jsonObject.put("ARFCNs", "20, 54, 23, 150");
-        array.add(jsonObject);
-        jsonObject = new JsonObject();
-        jsonObject.put("Network", "Orange");
-        jsonObject.put("MCC", 210);
-        jsonObject.put("LAC", 1010);
-        jsonObject.put("CI", 45);
-        jsonObject.put("ARFCNs", "20, 54, 23, 150");
-        array.add(jsonObject);
+        JsonArray array = extractAndFormatBtsList();
         rc.response().putHeader("content-type", "application/json").end(
                 array.encode()
         );
@@ -497,21 +394,12 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            // Calling python script to launch the sniffing
             command = new LinkedList<>();
             command.add("badimsicore_openbts");
             command.add("stop");
 
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 answer.put("stopped", res.succeeded());
@@ -542,8 +430,7 @@ public class BadIMSIService extends AbstractVerticle {
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
-            
-            
+
             command = new LinkedList<>();
             command.add("badimsicore_sns_sender");
             command.add(imsi);
@@ -551,21 +438,14 @@ public class BadIMSIService extends AbstractVerticle {
             command.add(msg);
 
             vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
+                launchAndWait(future);
             }, res -> {
                 JsonObject answer = new JsonObject();
                 answer.put("sended", res.succeeded());
                 if (res.succeeded()) {
                     Process p = (Process) res.result();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    BufferedReader br
+                            = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     br.lines().forEach(l -> {
                         // TODO
                         System.out.println(l);
@@ -593,33 +473,27 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            
+
             command = new LinkedList<>();
             command.add("badimsicore_sms_interceptor");
             command.add("-i");
             command.add("scripts/smqueue.txt");
-            
-            vertx.executeBlocking(future -> {
-                try {
-                    Process p = pythonManager.run((String[])command.toArray());
-                    // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
-                    future.complete(p);
-                } catch (InterruptedException | IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                    future.fail(ex);
-                }
-            }, res -> {
-                Process p = (Process) res.result();
-                InputStream processStream = (p.exitValue() == 0) ? p.getInputStream() : p.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
-                br.lines().forEach(l -> {
-                    // TODO
-                    System.out.println(l);
-                });
 
+            vertx.executeBlocking(future -> {
+                launchAndWait(future);
+            }, res -> {
                 JsonObject answer = new JsonObject();
-                answer.put("stopped", (p.exitValue() == 0));
+                if (res.succeeded()) {
+                    Process p = (Process) res.result();
+                    BufferedReader br
+                            = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    br.lines().forEach(l -> {
+                        // TODO
+                        System.out.println(l);
+                    });
+                } else {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -679,5 +553,49 @@ public class BadIMSIService extends AbstractVerticle {
         } catch (IOException | InterruptedException ie) {
             ie.printStackTrace();
         }*/
+    }
+
+    /**
+     * Blocking code executed by another thread handle by VertX
+     *
+     * @param future : The future which will be executed
+     */
+    private void launchAndWait(Future<Object> future) {
+        try {
+            Process p = pythonManager.run((String[]) command.toArray());
+            p.waitFor();
+            future.complete(p);
+        } catch (InterruptedException | IOException ex) {
+            Logger.getLogger(BadIMSIService.class.getName())
+                    .log(Level.SEVERE, null, ex);
+            future.fail(ex);
+        }
+    }
+
+    /**
+     * Extract and format in JSON all Bts classes stored in the operator list
+     * during the sniffing step
+     *
+     * @return a JsonArray containing all Bts as JsonObjects in the following
+     * order : Network, MCC, LAC, CI and a list of ARFCN
+     */
+    private JsonArray extractAndFormatBtsList() {
+        JsonArray array = new JsonArray();
+        operatorList.forEach(bts -> {
+            JsonObject tab = new JsonObject();
+            tab.put("Network", bts.getOperatorByMnc());
+            tab.put("MCC", bts.getOperator().getMcc());
+            tab.put("LAC", bts.getLac());
+            tab.put("CI", bts.getCi());
+            StringBuilder sb = new StringBuilder();
+            bts.getArfcn().forEach(arfcn -> {
+                sb.append(arfcn);
+                sb.append(", ");
+            });
+            sb.delete(sb.length() - 2, sb.length());
+            tab.put("ARFCNs", sb.toString());
+            array.add(tab);
+        });
+        return array;
     }
 }
