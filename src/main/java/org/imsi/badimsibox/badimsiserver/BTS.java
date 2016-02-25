@@ -3,8 +3,8 @@ package org.imsi.badimsibox.badimsiserver;
 import java.util.List;
 
 /**
- *
- * @author
+ * Class to represent a BTS station
+ * @author AlisterWan
  */
 public class BTS {
 
@@ -14,12 +14,12 @@ public class BTS {
     private final List<String> arfcn;
 
     /**
-     *
-     * @param mnc
-     * @param mcc
-     * @param lac
-     * @param ci
-     * @param arfcn
+     * Constructor of the class
+     * @param mnc : 
+     * @param mcc : 
+     * @param lac : 
+     * @param ci : 
+     * @param arfcn : 
      */
     public BTS(String mnc, String mcc, String lac, String ci, List<String> arfcn) {
         this.operator = new NetworkOperator(mnc, mcc);

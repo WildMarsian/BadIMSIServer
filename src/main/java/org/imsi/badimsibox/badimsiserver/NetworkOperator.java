@@ -1,5 +1,9 @@
 package org.imsi.badimsibox.badimsiserver;
 
+/**
+ * 
+ * @author AlisterWan
+ */
 public class NetworkOperator {
 
     private final String mcc;

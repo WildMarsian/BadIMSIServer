@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- *
- * @author
+ * Class to manager calls to launch Python scripts
+ * @author WarenUT TTAK
  */
 public class PythonManager {
 

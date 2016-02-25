@@ -3,14 +3,14 @@ package org.imsi.badimsibox.badimsiserver;
 import io.vertx.core.Vertx;
 
 /**
- *
- * @author
+ * Main class used to launch the VertX server
+ * @author AisukoWasTaken TTAK WarenUT
  */
 public class BadIMSIServer {
 
     /**
-     *
-     * @param args
+     * Main used to launch the VertX server
+     * @param args : command line arguments
      */
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();

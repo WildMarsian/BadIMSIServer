@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  *
- * @author
+ * @author AisukoWasTaken
  */
 public class Session {
 

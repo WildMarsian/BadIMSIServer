@@ -26,19 +26,18 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author
+ * @author AisukoWasTaken AlisterWan TTAK WarenUT
  */
 public class BadIMSIService extends AbstractVerticle {
-    
+
     private final PythonManager pythonManager = new PythonManager();
     private final List<BTS> operatorList = new ArrayList<>();
 
     static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
-    
+
     private Session currentSession = Session.init(vertx);
-    
 
     /**
      *
