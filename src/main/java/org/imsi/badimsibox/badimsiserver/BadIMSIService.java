@@ -58,60 +58,6 @@ public class BadIMSIService extends AbstractVerticle {
         }
     }
 
-    /*
-    public void getTMSIs() {
-        final List<Target> targets = new ArrayList<>();
-
-        Process proc;
-        String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore_openbts.py", "--list-tmsis"};
-        PythonCaller pc = new PythonCaller(pythonLocationScript);
-        try {
-            proc = pc.process();
-            try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-                buffer.lines().forEach(l -> {
-                    String[] words = l.split(" ");
-                    targets.add(new Target(words[0], words[1], words[2]));
-                });
-            }
-
-            if (proc.exitValue() == 0) {
-                if (targets.size() > 0) {
-                    for (Target target : targets) {
-                        vertx.eventBus().publish("imsi.new", target.toJson());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-    }
-     */
-    public void getAllSms() throws IOException {
-        /* TODO make objects to launch the SMSReader in another thread. 
-            One route to launch and another to get the current status. The last to get all data readed*/
-
- /*
-        String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
-
-        PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-            if (returnCode == 0) {
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-                bufferedReader.lines().forEach(l -> {
-                    String removeParenthesis = l.replaceAll("[()]", "");
-                    String[] splitted = removeParenthesis.split(",");
-                    String first = splitted[0].replaceAll("['']", "");
-                    String second = splitted[1].replaceAll("['']", "");
-                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
-                });
-            }
-        });
-        
-        try {
-            pc.exec();
-        } catch (IOException | InterruptedException ie) {
-            ie.printStackTrace();
-        }*/
-    }
-
     @Override
     public void start() {
         Router router = Router.router(vertx);
@@ -210,9 +156,10 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
+
             String operator = reqJson.getString("operator");
             JsonObject json = new JsonObject();
             json.put("operator", operator);
@@ -234,9 +181,9 @@ public class BadIMSIService extends AbstractVerticle {
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
             // Building the JSON on server side sent by client
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
 
             // retrieving the operator name from HTML page
             String operator = reqJson.getString("operator");
@@ -311,9 +258,9 @@ public class BadIMSIService extends AbstractVerticle {
 
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
             String operator = reqJson.getString("operator");
 
             String command = "jamming start";
@@ -374,9 +321,9 @@ public class BadIMSIService extends AbstractVerticle {
 
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
             String operator = reqJson.getString("operator");
 
             String command = "jamming stop";
@@ -412,9 +359,9 @@ public class BadIMSIService extends AbstractVerticle {
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
             // Building the JSON on server side sent by client
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
 
             // Calling python script to launch the sniffing
             String command = "badimsicore_openbts start";
@@ -448,9 +395,10 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
+
             String operator = reqJson.getString("operator");
             JsonObject json = new JsonObject();
             json.put("operator", operator);
@@ -472,9 +420,9 @@ public class BadIMSIService extends AbstractVerticle {
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
             // Building the JSON on server side sent by client
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
 
             // Calling python script to launch the sniffing
             String command = "badimsicore_openbts stop";
@@ -509,9 +457,9 @@ public class BadIMSIService extends AbstractVerticle {
 
         rc.request().bodyHandler(h -> {
             parseJsonParams(params, h);
-            for (String key : params.keySet()) {
+            params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
-            }
+            });
 
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
@@ -530,14 +478,7 @@ public class BadIMSIService extends AbstractVerticle {
                 }
             }, res -> {
                 Process p = (Process) res.result();
-
-                InputStream processStream = null;
-                if (p.exitValue() == 0) {
-                    processStream = p.getInputStream();
-                } else {
-                    processStream = p.getErrorStream();
-                }
-
+                InputStream processStream = (p.exitValue() == 0) ? p.getInputStream() : p.getErrorStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
                 br.lines().forEach(l -> {
                     System.out.println(l);
@@ -550,5 +491,100 @@ public class BadIMSIService extends AbstractVerticle {
                 );
             });
         });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void receiveSMS(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, h);
+            params.keySet().stream().forEach((key) -> {
+                reqJson.put(key, params.get(key));
+            });
+            String command = "badimsicore_sms_interceptor -i scripts/smqueue.txt";
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                InputStream processStream = (p.exitValue() == 0) ? p.getInputStream() : p.getErrorStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
+                br.lines().forEach(l -> {
+                    System.out.println(l);
+                });
+
+                JsonObject answer = new JsonObject();
+                answer.put("stopped", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
+            });
+        });
+    }
+
+    /*
+    public void getTMSIs() {
+        final List<Target> targets = new ArrayList<>();
+
+        Process proc;
+        String[] pythonLocationScript = {PythonCaller.getContextPath() + "badimsicore_openbts.py", "--list-tmsis"};
+        PythonCaller pc = new PythonCaller(pythonLocationScript);
+        try {
+            proc = pc.process();
+            try (BufferedReader buffer = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                buffer.lines().forEach(l -> {
+                    String[] words = l.split(" ");
+                    targets.add(new Target(words[0], words[1], words[2]));
+                });
+            }
+
+            if (proc.exitValue() == 0) {
+                if (targets.size() > 0) {
+                    for (Target target : targets) {
+                        vertx.eventBus().publish("imsi.new", target.toJson());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+    }
+     */
+    public void getAllSms() throws IOException {
+        /* TODO make objects to launch the SMSReader in another thread. 
+            One route to launch and another to get the current status. The last to get all data readed*/
+
+ /*
+        String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
+
+        PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
+            if (returnCode == 0) {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
+                bufferedReader.lines().forEach(l -> {
+                    String removeParenthesis = l.replaceAll("[()]", "");
+                    String[] splitted = removeParenthesis.split(",");
+                    String first = splitted[0].replaceAll("['']", "");
+                    String second = splitted[1].replaceAll("['']", "");
+                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
+                });
+            }
+        });
+        
+        try {
+            pc.exec();
+        } catch (IOException | InterruptedException ie) {
+            ie.printStackTrace();
+        }*/
     }
 }
