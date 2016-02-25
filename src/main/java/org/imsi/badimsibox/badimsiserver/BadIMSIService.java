@@ -184,6 +184,9 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
+            JsonObject json = new JsonObject().put("started", true);
+			this.vertx.eventBus().publish("observer.new", json.encode());
+            
             // retrieving the operator name from HTML page
             String operator = reqJson.getString("operator");
             String command = "badimsicore_listen -o " + operator;
@@ -234,9 +237,8 @@ public class BadIMSIService extends AbstractVerticle {
                     answer.put("status", "error");
                     answer.put("content", res.cause().getMessage());
                 }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
+                this.vertx.eventBus().publish("observer.new", answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
             });
         });
     }
