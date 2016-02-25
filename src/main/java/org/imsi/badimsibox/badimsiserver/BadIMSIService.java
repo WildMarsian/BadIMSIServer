@@ -82,6 +82,7 @@ public class BadIMSIService extends AbstractVerticle {
         // OpenBTS
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
+        router.route("/master/fakebts/getBTSList/").handler(this::getMockBTSList);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -187,6 +188,9 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
+            JsonObject json = new JsonObject().put("started", true);
+			this.vertx.eventBus().publish("observer.new", json.encode());
+            
             // retrieving the operator name from HTML page
             command = new LinkedList<>();
             command.add("badimsicore_listen");
@@ -247,9 +251,8 @@ public class BadIMSIService extends AbstractVerticle {
                     answer.put("status", "error");
                     answer.put("content", res.cause().getMessage());
                 }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
+                this.vertx.eventBus().publish("observer.new", answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
             });
         });
     }
@@ -359,6 +362,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
         });
     }
+    
 
     /**
      *
@@ -374,7 +378,7 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-
+            System.out.println(reqJson.encode());
             // Calling python script to launch the sniffing
             String command[] = {"badimsicore_openbts", "start"};
 
@@ -399,6 +403,60 @@ public class BadIMSIService extends AbstractVerticle {
                 );
             });
         });
+    }
+    
+    /**
+     * 
+     * @param rc
+     */
+    private void getBTSList(RoutingContext rc) {
+    	JsonArray array = new JsonArray();
+        operatorList.forEach(item -> {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", item.getOperatorByMnc());
+            jsonObject.put("MCC", item.getOperator().getMcc());
+            jsonObject.put("LAC", item.getLac());
+            jsonObject.put("CI", item.getCi());
+            StringBuilder sb = new StringBuilder();
+            item.getArfcn().forEach(arfcn -> {
+                sb.append(arfcn);
+                sb.append(", ");
+            });
+            sb.delete(sb.length() - 2, sb.length());
+            jsonObject.put("ARFCNs", sb.toString());
+            array.add(jsonObject);
+        });
+        rc.response().putHeader("content-type", "application/json").end(
+                array.encode()
+        );
+    }
+    
+    private void getMockBTSList(RoutingContext rc) {
+    	JsonArray array = new JsonArray();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 208);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 38);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 207);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 308);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 210);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 45);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
+        rc.response().putHeader("content-type", "application/json").end(
+                array.encode()
+        );
     }
 
     /**
