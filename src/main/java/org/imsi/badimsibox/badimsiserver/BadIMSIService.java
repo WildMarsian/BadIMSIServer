@@ -35,10 +35,10 @@ public class BadIMSIService extends AbstractVerticle {
     static String defaultIpAndPorts = "*";
 
     private final PythonManager pythonManager = new PythonManager();
-    private final List<BTS> operatorList = new ArrayList<>();
+    private final ArrayList<Bts> operatorList = new ArrayList<>();
     private Session currentSession = Session.init(vertx);
 
-    private List<String> command = null;
+    private LinkedList<String> command = null;
 
     /**
      *
@@ -151,7 +151,7 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
-     *
+     * 
      * @param rc
      */
     private void selectOperatorToSniff(RoutingContext rc) {
@@ -189,8 +189,8 @@ public class BadIMSIService extends AbstractVerticle {
             });
 
             JsonObject json = new JsonObject().put("started", true);
-			this.vertx.eventBus().publish("observer.new", json.encode());
-            
+            this.vertx.eventBus().publish("observer.new", json.encode());
+
             // retrieving the operator name from HTML page
             command = new LinkedList<>();
             command.add("badimsicore_listen");
@@ -206,9 +206,8 @@ public class BadIMSIService extends AbstractVerticle {
             // Blocking code
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run((String[])command.toArray());
+                    Process p = pythonManager.run((String[]) command.toArray());
                     // Give the return Object to the treatment block code
-                    System.out.println("Waiting process");
                     p.waitFor();
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
@@ -226,10 +225,9 @@ public class BadIMSIService extends AbstractVerticle {
                                 for (int i = 4; i < tab.length; i++) {
                                     arfcns.add(tab[i]);
                                 }
-                                operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
+                                operatorList.add(new Bts(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
                             });
                     answer.put("status", "data");
-                    System.out.println(operatorList);
                     JsonArray array = new JsonArray();
                     operatorList.forEach(bts -> {
                         JsonObject tab = new JsonObject();
@@ -270,13 +268,14 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            String operator = reqJson.getString("operator");
-
-            String command[] = {"jamming", "start"};
+            
+            command = new LinkedList<>();
+            command.add("jamming");
+            command.add("start");
 
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -336,13 +335,14 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            String operator = reqJson.getString("operator");
-
-            String command[] = {"jamming", "stop"};
+            
+            command = new LinkedList<>();
+            command.add("jamming");
+            command.add("stop");
 
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -362,7 +362,6 @@ public class BadIMSIService extends AbstractVerticle {
             });
         });
     }
-    
 
     /**
      *
@@ -378,13 +377,14 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            System.out.println(reqJson.encode());
-            // Calling python script to launch the sniffing
-            String command[] = {"badimsicore_openbts", "start"};
+            
+            command = new LinkedList<>();
+            command.add("badimsicore_openbts");
+            command.add("start");
 
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -404,13 +404,13 @@ public class BadIMSIService extends AbstractVerticle {
             });
         });
     }
-    
+
     /**
-     * 
+     *
      * @param rc
      */
     private void getBTSList(RoutingContext rc) {
-    	JsonArray array = new JsonArray();
+        JsonArray array = new JsonArray();
         operatorList.forEach(item -> {
             JsonObject jsonObject = new JsonObject();
             jsonObject.put("Network", item.getOperatorByMnc());
@@ -430,30 +430,30 @@ public class BadIMSIService extends AbstractVerticle {
                 array.encode()
         );
     }
-    
+
     private void getMockBTSList(RoutingContext rc) {
-    	JsonArray array = new JsonArray();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 208);
-            jsonObject.put("LAC", 1010);
-            jsonObject.put("CI", 38);
-            jsonObject.put("ARFCNs", "20, 54, 23, 150");
-            array.add(jsonObject);
-            jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 207);
-            jsonObject.put("LAC", 1010);
-            jsonObject.put("CI", 308);
-            jsonObject.put("ARFCNs", "20, 54, 23, 150");
-            array.add(jsonObject);
-            jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 210);
-            jsonObject.put("LAC", 1010);
-            jsonObject.put("CI", 45);
-            jsonObject.put("ARFCNs", "20, 54, 23, 150");
-            array.add(jsonObject);
+        JsonArray array = new JsonArray();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.put("Network", "Orange");
+        jsonObject.put("MCC", 208);
+        jsonObject.put("LAC", 1010);
+        jsonObject.put("CI", 38);
+        jsonObject.put("ARFCNs", "20, 54, 23, 150");
+        array.add(jsonObject);
+        jsonObject = new JsonObject();
+        jsonObject.put("Network", "Orange");
+        jsonObject.put("MCC", 207);
+        jsonObject.put("LAC", 1010);
+        jsonObject.put("CI", 308);
+        jsonObject.put("ARFCNs", "20, 54, 23, 150");
+        array.add(jsonObject);
+        jsonObject = new JsonObject();
+        jsonObject.put("Network", "Orange");
+        jsonObject.put("MCC", 210);
+        jsonObject.put("LAC", 1010);
+        jsonObject.put("CI", 45);
+        jsonObject.put("ARFCNs", "20, 54, 23, 150");
+        array.add(jsonObject);
         rc.response().putHeader("content-type", "application/json").end(
                 array.encode()
         );
@@ -498,11 +498,13 @@ public class BadIMSIService extends AbstractVerticle {
             });
 
             // Calling python script to launch the sniffing
-            String command[] = {"badimsicore_openbts", "stop"};
+            command = new LinkedList<>();
+            command.add("badimsicore_openbts");
+            command.add("stop");
 
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -540,12 +542,17 @@ public class BadIMSIService extends AbstractVerticle {
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
-
-            String command[] = {"badimsicore_sns_sender", "-s", imsi, sender, msg};
+            
+            
+            command = new LinkedList<>();
+            command.add("badimsicore_sns_sender");
+            command.add(imsi);
+            command.add(sender);
+            command.add(msg);
 
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -560,6 +567,7 @@ public class BadIMSIService extends AbstractVerticle {
                     Process p = (Process) res.result();
                     BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     br.lines().forEach(l -> {
+                        // TODO
                         System.out.println(l);
                     });
                 } else {
@@ -585,11 +593,15 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            String command[] = {"badimsicore_sms_interceptor", "-i", "scripts/smqueue.txt"};
-
+            
+            command = new LinkedList<>();
+            command.add("badimsicore_sms_interceptor");
+            command.add("-i");
+            command.add("scripts/smqueue.txt");
+            
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
@@ -602,6 +614,7 @@ public class BadIMSIService extends AbstractVerticle {
                 InputStream processStream = (p.exitValue() == 0) ? p.getInputStream() : p.getErrorStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
                 br.lines().forEach(l -> {
+                    // TODO
                     System.out.println(l);
                 });
 
