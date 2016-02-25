@@ -197,22 +197,21 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (IOException | InterruptedException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
-                BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(","))
-                        .forEach((tab) -> {
-                            List<String> arfcns = new ArrayList<>(tab.length - 4);
-                            for (int i = 4; i < tab.length; i++) {
-                                arfcns.add(tab[i]);
-                            }
-                            operatorList.add(
-                                    new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns)
-                            );
-                        });
                 JsonObject answer = new JsonObject();
-                if (p.exitValue() == 0) {
+                if (res.succeeded()) {
+                    Process p = (Process) res.result();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(","))
+                            .forEach((tab) -> {
+                                List<String> arfcns = new ArrayList<>(tab.length - 4);
+                                for (int i = 4; i < tab.length; i++) {
+                                    arfcns.add(tab[i]);
+                                }
+                                operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
+                            });
                     answer.put("status", "data");
                     JsonArray array = new JsonArray();
                     operatorList.forEach(bts -> {
@@ -233,12 +232,7 @@ public class BadIMSIService extends AbstractVerticle {
                     answer.put("content", array);
                 } else {
                     answer.put("status", "error");
-                    BufferedReader bf = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-                    StringBuilder str = new StringBuilder();
-                    bf.lines().forEach(line -> {
-                        str.append(line);
-                    });
-                    answer.put("content", str.toString());
+                    answer.put("content", res.cause().getMessage());
                 }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
