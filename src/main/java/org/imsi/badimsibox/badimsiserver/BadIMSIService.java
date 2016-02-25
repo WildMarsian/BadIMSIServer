@@ -201,7 +201,7 @@ public class BadIMSIService extends AbstractVerticle {
                     System.out.println("Waiting process");
                     p.waitFor();
                     future.complete(p);
-                } catch (IOException | InterruptedException ex) {
+                } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
                     future.fail(ex);
                 }
