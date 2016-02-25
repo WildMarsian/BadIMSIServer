@@ -79,7 +79,7 @@ public class BadIMSIService extends AbstractVerticle {
         // OpenBTS
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
-        router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
+        router.route("/master/fakebts/getBTSList/").handler(this::getMockBTSList);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -365,7 +365,7 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-
+            System.out.println(reqJson.encode());
             // Calling python script to launch the sniffing
             String command = "badimsicore_openbts start";
 
@@ -409,10 +409,38 @@ public class BadIMSIService extends AbstractVerticle {
                 sb.append(arfcn);
                 sb.append(", ");
             });
-            sb.delete(sb.length() - 1, sb.length());
+            sb.delete(sb.length() - 2, sb.length());
             jsonObject.put("ARFCNs", sb.toString());
             array.add(jsonObject);
         });
+        rc.response().putHeader("content-type", "application/json").end(
+                array.encode()
+        );
+    }
+    
+    private void getMockBTSList(RoutingContext rc) {
+    	JsonArray array = new JsonArray();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 208);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 38);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 207);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 308);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
+            jsonObject = new JsonObject();
+            jsonObject.put("Network", "Orange");
+            jsonObject.put("MCC", 210);
+            jsonObject.put("LAC", 1010);
+            jsonObject.put("CI", 45);
+            jsonObject.put("ARFCNs", "20, 54, 23, 150");
+            array.add(jsonObject);
         rc.response().putHeader("content-type", "application/json").end(
                 array.encode()
         );
