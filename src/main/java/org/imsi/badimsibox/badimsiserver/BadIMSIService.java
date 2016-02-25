@@ -79,6 +79,7 @@ public class BadIMSIService extends AbstractVerticle {
         // OpenBTS
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
+        router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -348,6 +349,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
         });
     }
+    
 
     /**
      *
@@ -388,6 +390,32 @@ public class BadIMSIService extends AbstractVerticle {
                 );
             });
         });
+    }
+    
+    /**
+     * 
+     * @param rc
+     */
+    private void getBTSList(RoutingContext rc) {
+    	JsonArray array = new JsonArray();
+        operatorList.forEach(item -> {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", item.getOperatorByMnc());
+            jsonObject.put("MCC", item.getOperator().getMcc());
+            jsonObject.put("LAC", item.getLac());
+            jsonObject.put("CI", item.getCi());
+            StringBuilder sb = new StringBuilder();
+            item.getArfcn().forEach(arfcn -> {
+                sb.append(arfcn);
+                sb.append(", ");
+            });
+            sb.delete(sb.length() - 1, sb.length());
+            jsonObject.put("ARFCNs", sb.toString());
+            array.add(jsonObject);
+        });
+        rc.response().putHeader("content-type", "application/json").end(
+                array.encode()
+        );
     }
 
     /**
