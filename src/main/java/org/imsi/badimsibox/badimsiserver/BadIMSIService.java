@@ -186,14 +186,16 @@ public class BadIMSIService extends AbstractVerticle {
 
             // retrieving the operator name from HTML page
             String operator = reqJson.getString("operator");
-            String command = "badimsicore_listen -o " + operator;
+            
+            String command[] = {"badimsicore_listen", "-o", operator, "-b", "GSM-900"};
 
             // Blocking code
             vertx.executeBlocking(future -> {
                 try {
                     Process p = pythonManager.run(command);
                     // Give the return Object to the treatment block code
-                    p.waitFor(10, TimeUnit.MINUTES);
+                    System.out.println("Waiting process");
+                    p.waitFor();
                     future.complete(p);
                 } catch (IOException | InterruptedException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
@@ -213,6 +215,7 @@ public class BadIMSIService extends AbstractVerticle {
                                 operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
                             });
                     answer.put("status", "data");
+                    System.out.println(operatorList);
                     JsonArray array = new JsonArray();
                     operatorList.forEach(bts -> {
                         JsonObject tab = new JsonObject();
@@ -256,7 +259,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
             String operator = reqJson.getString("operator");
 
-            String command = "jamming start";
+            String command[] = {"jamming", "start"};
 
             vertx.executeBlocking(future -> {
                 try {
@@ -322,7 +325,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
             String operator = reqJson.getString("operator");
 
-            String command = "jamming stop";
+            String command[] = {"jamming", "stop"};
 
             vertx.executeBlocking(future -> {
                 try {
@@ -363,7 +366,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
 
             // Calling python script to launch the sniffing
-            String command = "badimsicore_openbts start";
+            String command[] = {"badimsicore_openbts", "start"};
 
             vertx.executeBlocking(future -> {
                 try {
@@ -427,7 +430,7 @@ public class BadIMSIService extends AbstractVerticle {
             });
 
             // Calling python script to launch the sniffing
-            String command = "badimsicore_openbts stop";
+            String command[] = {"badimsicore_openbts", "stop"};
 
             vertx.executeBlocking(future -> {
                 try {
@@ -470,7 +473,7 @@ public class BadIMSIService extends AbstractVerticle {
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
 
-            String command = "badimsicore_sns_sender -s " + imsi + " " + sender + " " + msg;
+            String command[] = {"badimsicore_sns_sender", "-s", imsi, sender, msg};
 
             vertx.executeBlocking(future -> {
                 try {
@@ -514,7 +517,7 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            String command = "badimsicore_sms_interceptor -i scripts/smqueue.txt";
+            String command[] = {"badimsicore_sms_interceptor", "-i" , "scripts/smqueue.txt"};
 
             vertx.executeBlocking(future -> {
                 try {
