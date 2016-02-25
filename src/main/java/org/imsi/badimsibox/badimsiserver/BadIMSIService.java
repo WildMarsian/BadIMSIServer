@@ -19,8 +19,6 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
-import java.io.InputStream;
-import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,7 +36,7 @@ public class BadIMSIService extends AbstractVerticle {
     private final ArrayList<Bts> operatorList = new ArrayList<>();
 
     private Session currentSession = Session.init(vertx);
-    private LinkedList<String> command = null;
+    private ArrayList<String> command = new ArrayList<>();
 
     /**
      *
@@ -215,7 +213,7 @@ public class BadIMSIService extends AbstractVerticle {
             this.vertx.eventBus().publish("observer.new", json.encode());
 
             // retrieving the operator name from HTML page
-            command = new LinkedList<>();
+            command.clear();
             command.add("badimsicore_listen");
             command.add("-o");
             command.add(reqJson.getString("operator"));
@@ -273,7 +271,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("jamming");
             command.add("start");
 
@@ -317,7 +315,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("jamming");
             command.add("stop");
 
@@ -350,7 +348,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("badimsicore_openbts");
             command.add("start");
 
@@ -418,7 +416,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("badimsicore_openbts");
             command.add("stop");
 
@@ -455,7 +453,7 @@ public class BadIMSIService extends AbstractVerticle {
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("badimsicore_sns_sender");
             command.add(imsi);
             command.add(sender);
@@ -498,7 +496,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
-            command = new LinkedList<>();
+            command.clear();
             command.add("badimsicore_sms_interceptor");
             command.add("-i");
             command.add("scripts/smqueue.txt");
