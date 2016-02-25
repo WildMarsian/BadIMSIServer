@@ -19,6 +19,7 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import java.io.InputStream;
+import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,6 +37,8 @@ public class BadIMSIService extends AbstractVerticle {
     private final PythonManager pythonManager = new PythonManager();
     private final List<BTS> operatorList = new ArrayList<>();
     private Session currentSession = Session.init(vertx);
+
+    private List<String> command = null;
 
     /**
      *
@@ -185,14 +188,21 @@ public class BadIMSIService extends AbstractVerticle {
             });
 
             // retrieving the operator name from HTML page
-            String operator = reqJson.getString("operator");
-            
-            String command[] = {"badimsicore_listen", "-o", operator, "-b", "GSM-900"};
+            command = new LinkedList<>();
+            command.add("badimsicore_listen");
+            command.add("-o");
+            command.add(reqJson.getString("operator"));
+
+            String band = reqJson.getString("band");
+            if (band != null && !band.equalsIgnoreCase("")) {
+                command.add("-b");
+                command.add(reqJson.getString("band"));
+            }
 
             // Blocking code
             vertx.executeBlocking(future -> {
                 try {
-                    Process p = pythonManager.run(command);
+                    Process p = pythonManager.run((String[])command.toArray());
                     // Give the return Object to the treatment block code
                     System.out.println("Waiting process");
                     p.waitFor();
@@ -517,7 +527,7 @@ public class BadIMSIService extends AbstractVerticle {
             params.keySet().stream().forEach((key) -> {
                 reqJson.put(key, params.get(key));
             });
-            String command[] = {"badimsicore_sms_interceptor", "-i" , "scripts/smqueue.txt"};
+            String command[] = {"badimsicore_sms_interceptor", "-i", "scripts/smqueue.txt"};
 
             vertx.executeBlocking(future -> {
                 try {
