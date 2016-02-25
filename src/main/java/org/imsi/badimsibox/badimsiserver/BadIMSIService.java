@@ -219,9 +219,11 @@ public class BadIMSIService extends AbstractVerticle {
             command.add(reqJson.getString("operator"));
 
             String band = reqJson.getString("band");
+            System.out.println("Band to sniff : " + band);
             if (band != null && !band.equalsIgnoreCase("")) {
+                System.out.println("Band not valid, sniffing on all frequencies");
                 command.add("-b");
-                command.add(reqJson.getString("band"));
+                command.add(band);
             }
 
             // Blocking code
