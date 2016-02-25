@@ -30,13 +30,12 @@ import java.util.logging.Logger;
  */
 public class BadIMSIService extends AbstractVerticle {
 
-    private final PythonManager pythonManager = new PythonManager();
-    private final List<BTS> operatorList = new ArrayList<>();
-
     static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
 
+    private final PythonManager pythonManager = new PythonManager();
+    private final List<BTS> operatorList = new ArrayList<>();
     private Session currentSession = Session.init(vertx);
 
     /**
@@ -250,23 +249,36 @@ public class BadIMSIService extends AbstractVerticle {
                     operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
                 });
 
-                JsonArray array = new JsonArray();
-                operatorList.forEach(item -> {
-                    JsonObject jsonObject = new JsonObject();
-                    jsonObject.put("Network", item.getOperatorByMnc());
-                    jsonObject.put("MCC", item.getOperator().getMcc());
-                    jsonObject.put("LAC", item.getLac());
-                    jsonObject.put("CI", item.getCi());
-                    StringBuilder sb = new StringBuilder();
-                    item.getArfcn().forEach(arfcn -> {
-                        sb.append(arfcn);
-                        sb.append(", ");
+                JsonObject answer = new JsonObject();
+                if (p.exitValue() == 0) {
+                    answer.put("status", "data");
+                    JsonArray array = new JsonArray();
+                    operatorList.forEach(bts -> {
+                        JsonObject tab = new JsonObject();
+                        tab.put("Network", bts.getOperatorByMnc());
+                        tab.put("MCC", bts.getOperator().getMcc());
+                        tab.put("LAC", bts.getLac());
+                        tab.put("CI", bts.getCi());
+                        StringBuilder sb = new StringBuilder();
+                        bts.getArfcn().forEach(arfcn -> {
+                            sb.append(arfcn);
+                            sb.append(", ");
+                        });
+                        sb.delete(sb.length() - 1, sb.length());
+                        tab.put("ARFCNs", sb.toString());
+                        array.add(tab);
                     });
-                    sb.delete(sb.length() - 1, sb.length());
-                    jsonObject.put("ARFCNs", sb.toString());
-                    array.add(jsonObject);
-                });
-                rc.response().putHeader("content-type", "application/json").end(array.encode());
+                    answer.put("content", array);
+                } else {
+                    answer.put("status", "error");
+                    BufferedReader bf = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                    StringBuilder str = new StringBuilder();
+                    bf.lines().forEach(line -> {
+                        str.append(line);
+                    });
+                    answer.put("content", str.toString());
+                }
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
             });
         });
     }
