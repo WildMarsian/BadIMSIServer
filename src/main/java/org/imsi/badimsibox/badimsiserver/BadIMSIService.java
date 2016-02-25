@@ -44,7 +44,7 @@ public class BadIMSIService extends AbstractVerticle {
      * @param reqJson
      * @param h
      */
-    private void parseJsonParams(Map<String, String> params, JsonObject reqJson, Buffer h) {
+    private void parseJsonParams(Map<String, String> params, Buffer h) {
         String bufferMessage = h.toString();
         String[] paramSplits = bufferMessage.split("&");
         String[] valueSplits;
@@ -156,10 +156,12 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void startSession(RoutingContext rc) {
         String password = rc.request().getParam("password");
-        System.out.println(new Date() + ": Starting a session");
+        //System.out.println(new Date() + ": Starting a session");
         this.currentSession = new Session(password, vertx);
         this.currentSession.updateTimestamp();
-        rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("started", true).encode());
+        rc.response().putHeader("content-type", "application/json").end(
+                new JsonObject().put("started", true).encode()
+        );
     }
 
     /**
@@ -168,9 +170,17 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void getSessionState(RoutingContext rc) {
         if (this.currentSession == null) {
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", -1).encode());
+            rc.response().putHeader("content-type", "application/json").end(
+                    new JsonObject().put("state", -1).encode()
+            );
         } else {
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", this.currentSession.getSessionState()).put("password", this.currentSession.getPassword()).put("timestamp", this.currentSession.getTimestamp()).encode());
+            rc.response().putHeader("content-type", "application/json").end(
+                    new JsonObject()
+                    .put("state", this.currentSession.getSessionState())
+                    .put("password", this.currentSession.getPassword())
+                    .put("timestamp", this.currentSession.getTimestamp())
+                    .encode()
+            );
         }
     }
 
@@ -181,12 +191,14 @@ public class BadIMSIService extends AbstractVerticle {
     private void setSessionState(RoutingContext rc) {
         String stateString = rc.request().getParam("state");
         int stateInt = Integer.parseInt(stateString);
-        if ((stateInt > -1) && (stateInt < 5) && (this.currentSession.getSessionState() < stateInt)) {
+        boolean stateChanged = (stateInt > -1) && (stateInt < 5)
+                && (this.currentSession.getSessionState() < stateInt);
+        if (stateChanged) {
             this.currentSession.nextSessionState();
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", true).encode());
-        } else {
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", false).encode());
         }
+        rc.response().putHeader("content-type", "application/json").end(
+                new JsonObject().put("stateChanged", stateChanged).encode()
+        );
     }
 
     /**
@@ -197,7 +209,7 @@ public class BadIMSIService extends AbstractVerticle {
         final JsonObject reqJson = new JsonObject();
         final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
             }
@@ -205,7 +217,9 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject json = new JsonObject();
             json.put("operator", operator);
             this.vertx.eventBus().publish("observer.new", json.encode());
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+            rc.response().putHeader("content-type", "application/json").end(
+                    new JsonObject().put("selectReceived", true).encode()
+            );
         });
     }
 
@@ -218,7 +232,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             // Building the JSON on server side sent by client
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
@@ -241,14 +255,16 @@ public class BadIMSIService extends AbstractVerticle {
             }, res -> {
                 Process p = (Process) res.result();
                 BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(",")).forEach((tab) -> {
-                    List<String> arfcns = new ArrayList<>(tab.length - 4);
-                    for (int i = 4; i < tab.length; i++) {
-                        arfcns.add(tab[i]);
-                    }
-                    operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
-                });
-
+                br.lines().filter(line -> line.startsWith("->")).map(line -> line.split(","))
+                        .forEach((tab) -> {
+                            List<String> arfcns = new ArrayList<>(tab.length - 4);
+                            for (int i = 4; i < tab.length; i++) {
+                                arfcns.add(tab[i]);
+                            }
+                            operatorList.add(
+                                    new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns)
+                            );
+                        });
                 JsonObject answer = new JsonObject();
                 if (p.exitValue() == 0) {
                     answer.put("status", "data");
@@ -278,7 +294,9 @@ public class BadIMSIService extends AbstractVerticle {
                     });
                     answer.put("content", str.toString());
                 }
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -292,7 +310,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
             }
@@ -313,7 +331,9 @@ public class BadIMSIService extends AbstractVerticle {
                 Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
                 answer.put("started", (p.exitValue() == 0));
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -339,7 +359,9 @@ public class BadIMSIService extends AbstractVerticle {
             jsonObject.put("ARFCNs", sb.toString());
             array.add(jsonObject);
         });
-        rc.response().putHeader("content-type", "application/json").end(array.encode());
+        rc.response().putHeader("content-type", "application/json").end(
+                array.encode()
+        );
     }
 
     /**
@@ -351,7 +373,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
             }
@@ -372,7 +394,9 @@ public class BadIMSIService extends AbstractVerticle {
                 Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
                 answer.put("started", (p.exitValue() == 0));
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -386,7 +410,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             // Building the JSON on server side sent by client
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
@@ -408,7 +432,9 @@ public class BadIMSIService extends AbstractVerticle {
                 Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
                 answer.put("started", (p.exitValue() == 0));
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -421,7 +447,7 @@ public class BadIMSIService extends AbstractVerticle {
         final JsonObject reqJson = new JsonObject();
         final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
             }
@@ -429,7 +455,9 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject json = new JsonObject();
             json.put("operator", operator);
             this.vertx.eventBus().publish("observer.new", json.encode());
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+            rc.response().putHeader("content-type", "application/json").end(
+                    new JsonObject().put("selectReceived", true).encode()
+            );
         });
     }
 
@@ -442,7 +470,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             // Building the JSON on server side sent by client
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
@@ -464,7 +492,9 @@ public class BadIMSIService extends AbstractVerticle {
                 Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
                 answer.put("stopped", (p.exitValue() == 0));
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
@@ -478,7 +508,7 @@ public class BadIMSIService extends AbstractVerticle {
         final Map<String, String> params = new HashMap<>();
 
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, reqJson, h);
+            parseJsonParams(params, h);
             for (String key : params.keySet()) {
                 reqJson.put(key, params.get(key));
             }
@@ -515,7 +545,9 @@ public class BadIMSIService extends AbstractVerticle {
 
                 JsonObject answer = new JsonObject();
                 answer.put("stopped", (p.exitValue() == 0));
-                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
             });
         });
     }
