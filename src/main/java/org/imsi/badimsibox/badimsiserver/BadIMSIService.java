@@ -584,7 +584,7 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void launchAndWait(Future<Object> future) {
         try {
-            Process p = pythonManager.run((String[]) command.toArray());
+            Process p = pythonManager.run(command.stream().toArray(String[]::new));
             p.waitFor();
             future.complete(p);
         } catch (InterruptedException | IOException ex) {
