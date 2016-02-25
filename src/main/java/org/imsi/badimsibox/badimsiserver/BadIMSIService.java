@@ -225,7 +225,7 @@ public class BadIMSIService extends AbstractVerticle {
                             sb.append(arfcn);
                             sb.append(", ");
                         });
-                        sb.delete(sb.length() - 1, sb.length());
+                        sb.delete(sb.length() - 2, sb.length());
                         tab.put("ARFCNs", sb.toString());
                         array.add(tab);
                     });
@@ -266,11 +266,14 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
-                answer.put("started", (p.exitValue() == 0));
+                answer.put("started", res.succeeded());
+                if (res.failed()) {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -329,11 +332,14 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
-                answer.put("started", (p.exitValue() == 0));
+                answer.put("stopped", res.succeeded());
+                if (res.failed()) {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -367,11 +373,14 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
-                answer.put("started", (p.exitValue() == 0));
+                answer.put("started", res.succeeded());
+                if (res.failed()) {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -428,11 +437,14 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
                 JsonObject answer = new JsonObject();
-                answer.put("stopped", (p.exitValue() == 0));
+                answer.put("stopped", res.succeeded());
+                if (res.failed()) {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -468,17 +480,20 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
-                Process p = (Process) res.result();
-                InputStream processStream = (p.exitValue() == 0) ? p.getInputStream() : p.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
-                br.lines().forEach(l -> {
-                    System.out.println(l);
-                });
-
                 JsonObject answer = new JsonObject();
-                answer.put("stopped", (p.exitValue() == 0));
+                answer.put("sended", res.succeeded());
+                if (res.succeeded()) {
+                    Process p = (Process) res.result();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    br.lines().forEach(l -> {
+                        System.out.println(l);
+                    });
+                } else {
+                    answer.put("error", res.cause().getMessage());
+                }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -509,6 +524,7 @@ public class BadIMSIService extends AbstractVerticle {
                     future.complete(p);
                 } catch (InterruptedException | IOException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                    future.fail(ex);
                 }
             }, res -> {
                 Process p = (Process) res.result();
