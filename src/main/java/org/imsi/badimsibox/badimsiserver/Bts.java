@@ -6,7 +6,7 @@ import java.util.List;
  * Class to represent a BTS station
  * @author AlisterWan
  */
-public class BTS {
+public class Bts {
 
     private final NetworkOperator operator;
     private final String lac;
@@ -21,7 +21,7 @@ public class BTS {
      * @param ci : 
      * @param arfcn : 
      */
-    public BTS(String mnc, String mcc, String lac, String ci, List<String> arfcn) {
+    public Bts(String mnc, String mcc, String lac, String ci, List<String> arfcn) {
         this.operator = new NetworkOperator(mnc, mcc);
         this.lac = lac;
         this.ci = ci;
@@ -35,7 +35,7 @@ public class BTS {
      * @param ci
      * @param arfcn
      */
-    public BTS(NetworkOperator operator, String lac, String ci, List<String> arfcn) {
+    public Bts(NetworkOperator operator, String lac, String ci, List<String> arfcn) {
         this.operator = operator;
         this.lac = lac;
         this.ci = ci;

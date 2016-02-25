@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @author AlisterWan
  */
-public class SMS {
+public class Sms {
 
     private final String date;
     private final String message;
@@ -16,7 +16,7 @@ public class SMS {
      * @param date
      * @param message
      */
-    public SMS(String date, String message) {
+    public Sms(String date, String message) {
         this.date = date;
         this.message = message;
     }
