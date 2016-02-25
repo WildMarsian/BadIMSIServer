@@ -4,7 +4,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  *
- * @author TTAK
+ * @author
  */
 public class TestSniffing {
 
@@ -22,5 +22,4 @@ public class TestSniffing {
         System.out.println(sn.status());
         System.out.println(sn.getResult());*/
     }
-    
 }

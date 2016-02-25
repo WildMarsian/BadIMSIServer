@@ -5,20 +5,20 @@ import java.util.Objects;
 
 /**
  *
- * @author thibaut arthur
+ * @author
  */
 public class PythonManager {
 
     /**
      *
      * @param command
-     * @return the exit code
-     * @throws java.io.IOException
+     * @return
+     * @throws IOException
      */
     public Process run(String command) throws IOException {
         Objects.requireNonNull(command);
         if (command.length() == 0) {
-            throw new IllegalArgumentException("Python handle need a command to execute");
+            throw new IllegalArgumentException("No command specified");
         }
         Runtime rt = Runtime.getRuntime();
         return rt.exec(command);

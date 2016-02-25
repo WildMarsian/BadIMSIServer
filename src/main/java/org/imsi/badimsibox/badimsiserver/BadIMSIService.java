@@ -19,21 +19,33 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ *
+ * @author
+ */
 public class BadIMSIService extends AbstractVerticle {
+    
+    private final PythonManager pythonManager = new PythonManager();
+    private final List<BTS> operatorList = new ArrayList<>();
 
     static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
-    static List<Bts> operatorList = new ArrayList<>();
+    
     private Session currentSession = Session.init(vertx);
-    private PythonManager pythonManager = new PythonManager();
+    
 
-    private Sniffer snifferHandler = null;
-
+    /**
+     *
+     * @param params
+     * @param reqJson
+     * @param h
+     */
     private void parseJsonParams(Map<String, String> params, JsonObject reqJson, Buffer h) {
         String bufferMessage = h.toString();
         String[] paramSplits = bufferMessage.split("&");
@@ -112,245 +124,98 @@ public class BadIMSIService extends AbstractVerticle {
             rc.next();
         });
 
-        router.get("/master/session/start/:password").handler(rc -> {
-            String password = rc.request().getParam("password");
-            System.out.println(new Date() + ": Starting a session");
-            this.currentSession = new Session(password, vertx);
-            this.currentSession.updateTimestamp();
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("started", true).encode());
-        });
+        // Sessions
+        router.get("/master/session/start/:password").handler(this::startSession);
+        router.get("/master/session/state").handler(this::getSessionState);
+        router.get("/master/session/set/state/:state").handler(this::setSessionState);
 
-        router.get("/master/session/state").handler(rc -> {
-            if (this.currentSession == null) {
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", -1).encode());
-            } else {
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", this.currentSession.getSessionState()).put("password", this.currentSession.getPassword()).put("timestamp", this.currentSession.getTimestamp()).encode());
-            }
-        });
-
-        router.get("/master/session/set/state/:state").handler(rc -> {
-            String stateString = rc.request().getParam("state");
-            int stateInt = Integer.parseInt(stateString);
-            if ((stateInt > -1) && (stateInt < 5) && (this.currentSession.getSessionState() < stateInt)) {
-                this.currentSession.nextSessionState();
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", true).encode());
-            } else {
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", false).encode());
-            }
-        });
-
-        router.post("/master/sniffing/selectOperator/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-                String operator = reqJson.getString("operator");
-                JsonObject json = new JsonObject();
-                json.put("operator", operator);
-                this.vertx.eventBus().publish("observer.new", json.encode());
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
-            });
-        });
-
+        // Sniffing
+        router.post("/master/sniffing/selectOperator/").handler(this::selectOperatorToSniff);
         router.post("/master/sniffing/start/").handler(this::startSniffing);
 
-        router.route("/master/fakebts/getData/").handler(rc -> {
-            JsonArray array = new JsonArray();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 208);
-            jsonObject.put("LAC", 101);
-            jsonObject.put("CI", 10);
-            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
-            array.add(jsonObject);
-            jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 208);
-            jsonObject.put("LAC", 101);
-            jsonObject.put("CI", 11);
-            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
-            array.add(jsonObject);
-            jsonObject = new JsonObject();
-            jsonObject.put("Network", "Orange");
-            jsonObject.put("MCC", 208);
-            jsonObject.put("LAC", 101);
-            jsonObject.put("CI", 12);
-            jsonObject.put("ARFCNs", "10101, 434, 132, 43");
-            array.add(jsonObject);
-            this.vertx.eventBus().publish("observer.new", array.encode());
-            rc.response().putHeader("content-type", "application/json").end(array.encode());
-        });
+        // OpenBTS
+        router.post("/master/fakebts/start/").handler(this::startOpenBTS);
+        router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
+        router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
-        router.post("/master/fakebts/selectOperator/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-                String operator = reqJson.getString("operator");
-                JsonObject json = new JsonObject();
-                json.put("operator", operator);
-                this.vertx.eventBus().publish("observer.new", json.encode());
-                rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
-            });
-        });
+        // Jamming
+        router.post("/master/jamming/start/").handler(this::startJamming);
+        router.route("/master/jamming/operator/").handler(this::selectOperatorToJamm);
+        router.get("/master/jamming/stop").handler(this::stopJamming);
 
-        router.post("/master/fakebts/start/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
+        // SMS
+        router.post("/master/attack/sms/send/").handler(this::sendSMS);
 
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                // Building the JSON on server side sent by client
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                    System.out.println(key + " " + params.get(key));
-                }
-
-                // Calling python script to launch the sniffing
-                String[] pythonLocationScript = {"./badimsicore_openbts.py", "start"};
-
-                PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
-                    JsonObject answer = new JsonObject();
-                    answer.put("started", "started");
-                    rc.response().putHeader("content-type", "application/json").end(answer.encode());
-                });
-                handler.start();
-            });
-        });
-
-        router.post("/master/fakebts/stop/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                // Building the JSON on server side sent by client
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                    System.out.println(key + " " + params.get(key));
-                }
-
-                // Calling python script to launch the sniffing
-                String[] pythonLocationScript = {"./badimsicore_openbts.py", "stop"};
-
-                PythonHandler handler = new PythonHandler(pythonLocationScript, (in, out, err) -> {
-                    JsonObject answer = new JsonObject();
-                    answer.put("started", "started");
-                    rc.response().putHeader("content-type", "application/json").end(answer.encode());
-                });
-                handler.start();
-            });
-        });
-
-        // return the list of all BTS discovered in the sniffing step
-        router.route("/master/jamming/operator/").handler(rc -> {
-            JsonArray array = new JsonArray();
-            operatorList.forEach(item -> {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.put("Network", item.getOperatorByMnc());
-                jsonObject.put("MCC", item.getOperator().getMcc());
-                jsonObject.put("LAC", item.getLac());
-                jsonObject.put("CI", item.getCi());
-                StringBuilder sb = new StringBuilder();
-                item.getArfcn().forEach(arfcn -> {
-                    sb.append(arfcn);
-                    sb.append(", ");
-                });
-                sb.delete(sb.length() - 1, sb.length());
-                jsonObject.put("ARFCNs", sb.toString());
-                array.add(jsonObject);
-            });
-            rc.response().putHeader("content-type", "application/json").end(array.encode());
-        });
-
-        router.post("/master/jamming/start/").handler(rc -> {
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                // Building the JSON on server side sent by client
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-                String operator = reqJson.getString("operator");
-                if (operator != null) {
-                    // We have to give the right response
-                    rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", "start").put("operator", operator).encode());
-                }
-            });
-        });
-
-        router.get("/master/jamming/stop").handler(rc -> {
-            // We have to give the right response
-            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", "stop").encode());
-
-            /*
-			 * String[] pythonLocationScript =
-			 * {PythonCaller.getContextPath()+"badimsicore","-j",name};
-			 * PythonCaller pc = new PythonCaller(pythonLocationScript); int
-			 * exitValue = -1; try { exitValue = pc.process(); } catch
-			 * (Exception e) { e.printStackTrace(); }
-			 * 
-			 * if(exitValue == 0) { rc.response() .putHeader("content-type",
-			 * "application/json") .end(new JsonObject().put("jamming",
-			 * pc.getResultSb()) .encode()); }
-             */
-        });
-
-        router.post("/master/attack/sms/send/").handler(rc -> {
-            // We have to give the right response
-            final JsonObject reqJson = new JsonObject();
-            final Map<String, String> params = new HashMap<>();
-
-            rc.request().bodyHandler(h -> {
-                parseJsonParams(params, reqJson, h);
-                for (String key : params.keySet()) {
-                    reqJson.put(key, params.get(key));
-                }
-
-                String sender = reqJson.getString("sender");
-                String msg = reqJson.getString("message");
-                String imsi = reqJson.getString("imsi");
-
-                String[] cmd = {PythonCaller.getContextPath() + "badimsicore_sms_sender.py", "-s", imsi, sender, msg};
-                PythonCaller pythonCaller = new PythonCaller(cmd, (input, output, error, returnCode) -> {
-                    if (returnCode == 0) {
-                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
-                        bufferedReader.lines().forEach(l -> {
-                            System.out.println(l);
-                        });
-                    } else {
-                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(error));
-                        bufferedReader.lines().forEach(l -> {
-                            System.out.println(l);
-                        });
-                    }
-                });
-
-                try {
-                    pythonCaller.exec();
-                } catch (IOException | InterruptedException ie) {
-                    System.out.println("File not found");
-                }
-            });
-
-        });
-
+        // Creating routes
         router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(new BridgeOptions().addOutboundPermitted(new PermittedOptions())));
-
         router.route().handler(StaticHandler.create());
         vertx.createHttpServer().requestHandler(router::accept).listen(8080);
     }
 
-    private void startSniffing(RoutingContext rc) {
+    /**
+     *
+     * @param rc
+     */
+    private void startSession(RoutingContext rc) {
+        String password = rc.request().getParam("password");
+        System.out.println(new Date() + ": Starting a session");
+        this.currentSession = new Session(password, vertx);
+        this.currentSession.updateTimestamp();
+        rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("started", true).encode());
+    }
 
+    /**
+     *
+     * @param rc
+     */
+    private void getSessionState(RoutingContext rc) {
+        if (this.currentSession == null) {
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", -1).encode());
+        } else {
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("state", this.currentSession.getSessionState()).put("password", this.currentSession.getPassword()).put("timestamp", this.currentSession.getTimestamp()).encode());
+        }
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void setSessionState(RoutingContext rc) {
+        String stateString = rc.request().getParam("state");
+        int stateInt = Integer.parseInt(stateString);
+        if ((stateInt > -1) && (stateInt < 5) && (this.currentSession.getSessionState() < stateInt)) {
+            this.currentSession.nextSessionState();
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", true).encode());
+        } else {
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("stateChanged", false).encode());
+        }
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void selectOperatorToSniff(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+            String operator = reqJson.getString("operator");
+            JsonObject json = new JsonObject();
+            json.put("operator", operator);
+            this.vertx.eventBus().publish("observer.new", json.encode());
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void startSniffing(RoutingContext rc) {
         final JsonObject reqJson = new JsonObject();
         final Map<String, String> params = new HashMap<>();
 
@@ -372,9 +237,7 @@ public class BadIMSIService extends AbstractVerticle {
                     // Give the return Object to the treatment block code
                     p.waitFor(10, TimeUnit.MINUTES);
                     future.complete(p);
-                } catch (IOException ex) {
-                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (InterruptedException ex) {
+                } catch (IOException | InterruptedException ex) {
                     Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }, res -> {
@@ -385,7 +248,7 @@ public class BadIMSIService extends AbstractVerticle {
                     for (int i = 4; i < tab.length; i++) {
                         arfcns.add(tab[i]);
                     }
-                    operatorList.add(new Bts(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
+                    operatorList.add(new BTS(tab[0].split(" ")[1], tab[1], tab[2], tab[3], arfcns));
                 });
 
                 JsonArray array = new JsonArray();
@@ -407,6 +270,242 @@ public class BadIMSIService extends AbstractVerticle {
                 rc.response().putHeader("content-type", "application/json").end(array.encode());
             });
         });
+    }
 
+    /**
+     *
+     * @param rc
+     */
+    private void startJamming(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+            String operator = reqJson.getString("operator");
+
+            String command = "jamming start";
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                JsonObject answer = new JsonObject();
+                answer.put("started", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void selectOperatorToJamm(RoutingContext rc) {
+        JsonArray array = new JsonArray();
+        operatorList.forEach(item -> {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("Network", item.getOperatorByMnc());
+            jsonObject.put("MCC", item.getOperator().getMcc());
+            jsonObject.put("LAC", item.getLac());
+            jsonObject.put("CI", item.getCi());
+            StringBuilder sb = new StringBuilder();
+            item.getArfcn().forEach(arfcn -> {
+                sb.append(arfcn);
+                sb.append(", ");
+            });
+            sb.delete(sb.length() - 1, sb.length());
+            jsonObject.put("ARFCNs", sb.toString());
+            array.add(jsonObject);
+        });
+        rc.response().putHeader("content-type", "application/json").end(array.encode());
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void stopJamming(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+            String operator = reqJson.getString("operator");
+
+            String command = "jamming stop";
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                JsonObject answer = new JsonObject();
+                answer.put("started", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void startOpenBTS(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            // Building the JSON on server side sent by client
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+
+            // Calling python script to launch the sniffing
+            String command = "badimsicore_openbts start";
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                JsonObject answer = new JsonObject();
+                answer.put("started", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void selectOperatorToSpoof(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+            String operator = reqJson.getString("operator");
+            JsonObject json = new JsonObject();
+            json.put("operator", operator);
+            this.vertx.eventBus().publish("observer.new", json.encode());
+            rc.response().putHeader("content-type", "application/json").end(new JsonObject().put("selectReceived", true).encode());
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void stopOpenBTS(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            // Building the JSON on server side sent by client
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+
+            // Calling python script to launch the sniffing
+            String command = "badimsicore_openbts stop";
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+                JsonObject answer = new JsonObject();
+                answer.put("stopped", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
+    }
+
+    /**
+     *
+     * @param rc
+     */
+    private void sendSMS(RoutingContext rc) {
+        final JsonObject reqJson = new JsonObject();
+        final Map<String, String> params = new HashMap<>();
+
+        rc.request().bodyHandler(h -> {
+            parseJsonParams(params, reqJson, h);
+            for (String key : params.keySet()) {
+                reqJson.put(key, params.get(key));
+            }
+
+            String sender = reqJson.getString("sender");
+            String msg = reqJson.getString("message");
+            String imsi = reqJson.getString("imsi");
+
+            String command = "badimsicore_sns_sender -s " + imsi + " " + sender + " " + msg;
+
+            vertx.executeBlocking(future -> {
+                try {
+                    Process p = pythonManager.run(command);
+                    // Give the return Object to the treatment block code
+                    p.waitFor(10, TimeUnit.MINUTES);
+                    future.complete(p);
+                } catch (InterruptedException | IOException ex) {
+                    Logger.getLogger(BadIMSIService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }, res -> {
+                Process p = (Process) res.result();
+
+                InputStream processStream = null;
+                if (p.exitValue() == 0) {
+                    processStream = p.getInputStream();
+                } else {
+                    processStream = p.getErrorStream();
+                }
+
+                BufferedReader br = new BufferedReader(new InputStreamReader(processStream));
+                br.lines().forEach(l -> {
+                    System.out.println(l);
+                });
+
+                JsonObject answer = new JsonObject();
+                answer.put("stopped", (p.exitValue() == 0));
+                rc.response().putHeader("content-type", "application/json").end(answer.encode());
+            });
+        });
     }
 }

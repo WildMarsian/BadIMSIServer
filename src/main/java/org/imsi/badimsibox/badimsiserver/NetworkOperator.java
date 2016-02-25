@@ -5,11 +5,20 @@ public class NetworkOperator {
     private final String mcc;
     private final String mnc;
 
+    /**
+     *
+     * @param mnc
+     * @param mcc
+     */
     public NetworkOperator(String mnc, String mcc) {
         this.mnc = mnc;
         this.mcc = mcc;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getNetworkName() {
         switch (mnc) {
             case "01":
@@ -35,6 +44,10 @@ public class NetworkOperator {
         }
     }
 
+    /**
+     *
+     * @return
+     */
     public String getMcc() {
         return mcc;
     }
@@ -43,5 +56,4 @@ public class NetworkOperator {
     public String toString() {
         return getNetworkName() + ": " + this.mnc + " " + this.mcc;
     }
-
 }
