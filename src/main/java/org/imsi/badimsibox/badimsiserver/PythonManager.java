@@ -15,12 +15,12 @@ public class PythonManager {
      * @return
      * @throws IOException
      */
-    public Process run(String command) throws IOException {
+    public Process run(String[] command) throws IOException {
         Objects.requireNonNull(command);
-        if (command.length() == 0) {
+        if (command.length == 0) {
             throw new IllegalArgumentException("No command specified");
         }
-        Runtime rt = Runtime.getRuntime();
-        return rt.exec(command);
+        ProcessBuilder pb = new ProcessBuilder(command);
+        return pb.start();
     }
 }
