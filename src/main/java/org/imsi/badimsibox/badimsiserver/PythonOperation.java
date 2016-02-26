@@ -9,5 +9,5 @@ import java.io.OutputStream;
  */
 @FunctionalInterface
 public interface PythonOperation {
-    public void accept(InputStream in, OutputStream out, InputStream error);
+    public void accept(InputStream in, OutputStream out);
 }

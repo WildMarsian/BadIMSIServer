@@ -47,7 +47,7 @@ public class SynchronousThreadManager {
                 try {
                     Process p = manager.run(command);
                     if (p.exitValue() == 0) {
-                        operation.accept(p.getInputStream(), null, null); // TODO test null values
+                        operation.accept(p.getInputStream(), null); // TODO test null values
                         Thread.sleep(refreshTime);
                     } else {
                         BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly, trying again", p.exitValue());

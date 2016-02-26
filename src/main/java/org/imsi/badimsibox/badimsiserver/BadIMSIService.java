@@ -428,7 +428,7 @@ public class BadIMSIService extends AbstractVerticle {
         command.add("scripts/smqueue.txt");
 
         SynchronousThreadManager smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 2000);
-        smsThreadManager.start((in, out, err) -> {
+        smsThreadManager.start((in, out) -> {
             BufferedReader bf
                     = new BufferedReader(new InputStreamReader(in));
             bf.lines().forEach(line -> {
