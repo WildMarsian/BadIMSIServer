@@ -470,16 +470,16 @@ public class BadIMSIService extends AbstractVerticle {
         command.add("badimsicore_openbts");
         command.add("tmsis");
 
-        timsiThreadManager = 
-                new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
+        timsiThreadManager
+                = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
             timsiThreadManager.start((in, out) -> {
                 // TODO AisukoWasTaken !!
                 BufferedReader bf = new BufferedReader(new InputStreamReader(in));
                 bf.lines().skip(2).forEach(line -> {
                     String[] words = line.split(" ");
-                    MobileTarget target = 
-                            new MobileTarget(words[0], words[1], words[2], "", "", "", "");
+                    MobileTarget target
+                            = new MobileTarget(words[0], words[1], words[2], "", "", "", "");
                     vertx.eventBus().publish("imsi.new", target.toJson());
                 });
             });

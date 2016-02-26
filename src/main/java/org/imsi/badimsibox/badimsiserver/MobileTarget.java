@@ -68,6 +68,10 @@ public class MobileTarget {
         json.put("IMSI", imsi);
         json.put("TMSI", tmsi);
         json.put("IMEI", imei);
+        json.put("AUTH", auth);
+        json.put("CREATED", created);
+        json.put("ACCESSED", accessed);
+        json.put("ASSIGNED", timsiAssigned);
         return json;
     }
 

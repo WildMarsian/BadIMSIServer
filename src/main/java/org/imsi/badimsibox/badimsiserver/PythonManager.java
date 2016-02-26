@@ -10,10 +10,11 @@ import java.util.Objects;
 public class PythonManager {
 
     /**
-     *
-     * @param command
-     * @return
-     * @throws IOException
+     * Run the specified command in a new process
+     * @param command : the command to execute
+     * @return : the process created to execute the command
+     * @throws IOException : if the specified command is not found or can't be
+     * executed for some reason
      */
     public Process run(String[] command) throws IOException {
         Objects.requireNonNull(command);
