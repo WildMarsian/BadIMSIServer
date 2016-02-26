@@ -34,29 +34,9 @@ public class BadIMSIService extends AbstractVerticle {
 
     private final PythonManager pythonManager = new PythonManager();
     private final ArrayList<Bts> operatorList = new ArrayList<>();
+    private final ArrayList<String> command = new ArrayList<>();
 
     private Session currentSession = Session.init(vertx);
-    private ArrayList<String> command = new ArrayList<>();
-
-    /**
-     *
-     * @param params
-     * @param reqJson
-     * @param h
-     */
-    private void parseJsonParams(Map<String, String> params, Buffer h) {
-        String bufferMessage = h.toString();
-        String[] paramSplits = bufferMessage.split("&");
-        String[] valueSplits;
-
-        for (String param : paramSplits) {
-            valueSplits = param.split("=");
-            if (valueSplits.length > 1) {
-                String msg = valueSplits[1].replace("+", " ");
-                params.put((valueSplits[0]), msg);
-            }
-        }
-    }
 
     @Override
     public void start() {
@@ -153,14 +133,8 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void selectOperatorToSniff(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
+            JsonObject reqJson = formatJsonParams(h);
             String operator = reqJson.getString("operator");
             JsonObject json = new JsonObject();
             json.put("operator", operator);
@@ -170,61 +144,42 @@ public class BadIMSIService extends AbstractVerticle {
             );
         });
     }
-    
-    /**
-    *
-    * @param rc
-    */
-   private void selectBandToSniff(RoutingContext rc) {
-       final JsonObject reqJson = new JsonObject();
-       final Map<String, String> params = new HashMap<>();
-       rc.request().bodyHandler(h -> {
-           parseJsonParams(params, h);
-           params.keySet().stream().forEach((key) -> {
-               reqJson.put(key, params.get(key));
-           });
 
-           String operator = reqJson.getString("band");
-           JsonObject json = new JsonObject();
-           json.put("band", operator);
-           this.vertx.eventBus().publish("observer.new", json.encode());
-           rc.response().putHeader("content-type", "application/json").end(
-                   new JsonObject().put("selectReceived", true).encode()
-           );
-       });
-   }
+    /**
+     *
+     * @param rc
+     */
+    private void selectBandToSniff(RoutingContext rc) {
+        rc.request().bodyHandler(h -> {
+            JsonObject reqJson = formatJsonParams(h);
+
+            String operator = reqJson.getString("band");
+            JsonObject json = new JsonObject();
+            json.put("band", operator);
+            this.vertx.eventBus().publish("observer.new", json.encode());
+            rc.response().putHeader("content-type", "application/json").end(
+                    new JsonObject().put("selectReceived", true).encode()
+            );
+        });
+    }
 
     /**
      *
      * @param rc
      */
     private void startSniffing(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
-
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            // Building the JSON on server side sent by client
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
+            JsonObject reqJson = formatJsonParams(h);
+            signalWebForLongTreatments();
 
-            // Warn the web interface that the sniffing has began
-            JsonObject json = new JsonObject().put("started", true);
-            this.vertx.eventBus().publish("observer.new", json.encode());
-
-            // retrieving the operator name from HTML page
+            // Retrieving data from the web interface
             command.clear();
             command.add("badimsicore_listen");
             command.add("-o");
-            String operator = reqJson.getString("operator");
-            System.out.println("Operator : " + operator);
-            command.add(operator);
+            command.add(reqJson.getString("operator"));
 
             String band = reqJson.getString("band");
-            System.out.println("Band to sniff : " + band);
             if (band != null && !band.equalsIgnoreCase("")) {
-                System.out.println("Sniffing on : " + band);
                 command.add("-b");
                 command.add(band);
             }
@@ -267,31 +222,21 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void startJamming(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
+        command.clear();
+        command.add("jamming");
+        command.add("start");
 
-        rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
-            command.clear();
-            command.add("jamming");
-            command.add("start");
-
-            vertx.executeBlocking(future -> {
-                launchAndWait(future);
-            }, res -> {
-                JsonObject answer = new JsonObject();
-                answer.put("started", res.succeeded());
-                if (res.failed()) {
-                    answer.put("error", res.cause().getMessage());
-                }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
-            });
+        vertx.executeBlocking(future -> {
+            launchAndWait(future);
+        }, res -> {
+            JsonObject answer = new JsonObject();
+            answer.put("started", res.succeeded());
+            if (res.failed()) {
+                answer.put("error", res.cause().getMessage());
+            }
+            rc.response().putHeader("content-type", "application/json").end(
+                    answer.encode()
+            );
         });
     }
 
@@ -311,31 +256,21 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void stopJamming(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
+        command.clear();
+        command.add("jamming");
+        command.add("stop");
 
-        rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
-            command.clear();
-            command.add("jamming");
-            command.add("stop");
-
-            vertx.executeBlocking(future -> {
-                launchAndWait(future);
-            }, res -> {
-                JsonObject answer = new JsonObject();
-                answer.put("stopped", res.succeeded());
-                if (res.failed()) {
-                    answer.put("error", res.cause().getMessage());
-                }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
-            });
+        vertx.executeBlocking(future -> {
+            launchAndWait(future);
+        }, res -> {
+            JsonObject answer = new JsonObject();
+            answer.put("stopped", res.succeeded());
+            if (res.failed()) {
+                answer.put("error", res.cause().getMessage());
+            }
+            rc.response().putHeader("content-type", "application/json").end(
+                    answer.encode()
+            );
         });
     }
 
@@ -344,31 +279,21 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void startOpenBTS(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
+        command.clear();
+        command.add("badimsicore_openbts");
+        command.add("start");
 
-        rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
-            command.clear();
-            command.add("badimsicore_openbts");
-            command.add("start");
-
-            vertx.executeBlocking(future -> {
-                launchAndWait(future);
-            }, res -> {
-                JsonObject answer = new JsonObject();
-                answer.put("started", res.succeeded());
-                if (res.failed()) {
-                    answer.put("error", res.cause().getMessage());
-                }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
-            });
+        vertx.executeBlocking(future -> {
+            launchAndWait(future);
+        }, res -> {
+            JsonObject answer = new JsonObject();
+            answer.put("started", res.succeeded());
+            if (res.failed()) {
+                answer.put("error", res.cause().getMessage());
+            }
+            rc.response().putHeader("content-type", "application/json").end(
+                    answer.encode()
+            );
         });
     }
 
@@ -388,14 +313,8 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void selectOperatorToSpoof(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
+            JsonObject reqJson = formatJsonParams(h);
             String operator = reqJson.getString("operator");
             JsonObject json = new JsonObject();
             json.put("operator", operator);
@@ -411,32 +330,21 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void stopOpenBTS(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
+        command.clear();
+        command.add("badimsicore_openbts");
+        command.add("stop");
 
-        rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            // Building the JSON on server side sent by client
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
-            command.clear();
-            command.add("badimsicore_openbts");
-            command.add("stop");
-
-            vertx.executeBlocking(future -> {
-                launchAndWait(future);
-            }, res -> {
-                JsonObject answer = new JsonObject();
-                answer.put("stopped", res.succeeded());
-                if (res.failed()) {
-                    answer.put("error", res.cause().getMessage());
-                }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
-            });
+        vertx.executeBlocking(future -> {
+            launchAndWait(future);
+        }, res -> {
+            JsonObject answer = new JsonObject();
+            answer.put("stopped", res.succeeded());
+            if (res.failed()) {
+                answer.put("error", res.cause().getMessage());
+            }
+            rc.response().putHeader("content-type", "application/json").end(
+                    answer.encode()
+            );
         });
     }
 
@@ -445,14 +353,8 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void sendSMS(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
-
         rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
+            JsonObject reqJson = formatJsonParams(h);
 
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
@@ -492,39 +394,29 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void receiveSMS(RoutingContext rc) {
-        final JsonObject reqJson = new JsonObject();
-        final Map<String, String> params = new HashMap<>();
+        command.clear();
+        command.add("badimsicore_sms_interceptor");
+        command.add("-i");
+        command.add("scripts/smqueue.txt");
 
-        rc.request().bodyHandler(h -> {
-            parseJsonParams(params, h);
-            params.keySet().stream().forEach((key) -> {
-                reqJson.put(key, params.get(key));
-            });
-
-            command.clear();
-            command.add("badimsicore_sms_interceptor");
-            command.add("-i");
-            command.add("scripts/smqueue.txt");
-
-            vertx.executeBlocking(future -> {
-                launchAndWait(future);
-            }, res -> {
-                JsonObject answer = new JsonObject();
-                if (res.succeeded()) {
-                    Process p = (Process) res.result();
-                    BufferedReader br
-                            = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    br.lines().forEach(l -> {
-                        // TODO
-                        System.out.println(l);
-                    });
-                } else {
-                    answer.put("error", res.cause().getMessage());
-                }
-                rc.response().putHeader("content-type", "application/json").end(
-                        answer.encode()
-                );
-            });
+        vertx.executeBlocking(future -> {
+            launchAndWait(future);
+        }, res -> {
+            JsonObject answer = new JsonObject();
+            if (res.succeeded()) {
+                Process p = (Process) res.result();
+                BufferedReader br
+                        = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                br.lines().forEach(l -> {
+                    // TODO
+                    System.out.println(l);
+                });
+            } else {
+                answer.put("error", res.cause().getMessage());
+            }
+            rc.response().putHeader("content-type", "application/json").end(
+                    answer.encode()
+            );
         });
     }
 
@@ -556,7 +448,7 @@ public class BadIMSIService extends AbstractVerticle {
     }
      */
     public void getAllSms() throws IOException {
-        /* TODO make objects to launch the SMSReader in another thread. 
+        /* TODO make objects to launch the SMSReader in another thread.
             One route to launch and another to get the current status. The last to get all data readed*/
 
  /*
@@ -574,7 +466,7 @@ public class BadIMSIService extends AbstractVerticle {
                 });
             }
         });
-        
+
         try {
             pc.exec();
         } catch (IOException | InterruptedException ie) {
@@ -624,5 +516,47 @@ public class BadIMSIService extends AbstractVerticle {
             array.add(tab);
         });
         return array;
+    }
+
+    /**
+     *
+     * @param params
+     * @param reqJson
+     * @param h
+     */
+    private void parseJsonParams(Map<String, String> params, Buffer h) {
+        String bufferMessage = h.toString();
+        String[] paramSplits = bufferMessage.split("&");
+        String[] valueSplits;
+
+        for (String param : paramSplits) {
+            valueSplits = param.split("=");
+            if (valueSplits.length > 1) {
+                String msg = valueSplits[1].replace("+", " ");
+                params.put((valueSplits[0]), msg);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param h
+     */
+    private JsonObject formatJsonParams(Buffer h) {
+        JsonObject reqJson = new JsonObject();
+        HashMap<String, String> params = new HashMap<>();
+        parseJsonParams(params, h);
+        params.keySet().stream().forEach((key) -> {
+            reqJson.put(key, params.get(key));
+        });
+        return reqJson;
+    }
+
+    /**
+     * Warn the Web interface a long treatment as began and must wait for answer
+     */
+    private void signalWebForLongTreatments() {
+        JsonObject json = new JsonObject().put("started", true);
+        this.vertx.eventBus().publish("observer.new", json.encode());
     }
 }
