@@ -459,7 +459,6 @@ public class BadIMSIService extends AbstractVerticle {
         }, res -> {
             // Do Nothing
         });
-
     }
 
     /**
@@ -483,8 +482,8 @@ public class BadIMSIService extends AbstractVerticle {
                 });
             });
         }, res -> {
+            // Do nothing
         });
-        // Do nothing
     }
 
     /**
