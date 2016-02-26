@@ -71,6 +71,10 @@ public class BadIMSIService extends AbstractVerticle {
 
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
+        router.route("/master/attack/sms/receive/").handler(this::receiveSMS); // must be synchronize
+        
+        // TIMSI
+        
 
         // Creating routes
         router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(new BridgeOptions().addOutboundPermitted(new PermittedOptions())));
@@ -279,6 +283,12 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void startOpenBTS(RoutingContext rc) {
+        
+        
+        // TODO
+        // CI
+        // => récupération de la BTS utilisée dans OperatorList
+        
         command.clear();
         command.add("badimsicore_openbts");
         command.add("start");
@@ -355,6 +365,11 @@ public class BadIMSIService extends AbstractVerticle {
     private void sendSMS(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
+            
+            
+            // MSISDN Source (sender)
+            // Message
+            // Destination
 
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
@@ -394,6 +409,9 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void receiveSMS(RoutingContext rc) {
+        
+        // synchrone thread !! => échanges directs avec interface
+        
         command.clear();
         command.add("badimsicore_sms_interceptor");
         command.add("-i");
@@ -485,8 +503,7 @@ public class BadIMSIService extends AbstractVerticle {
             p.waitFor();
             future.complete(p);
         } catch (InterruptedException | IOException ex) {
-            Logger.getLogger(BadIMSIService.class.getName())
-                    .log(Level.SEVERE, null, ex);
+            BadIMSILogger.getLogger().log(Level.SEVERE, null, ex);
             future.fail(ex);
         }
     }
