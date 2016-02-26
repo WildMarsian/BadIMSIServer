@@ -6,7 +6,7 @@ import java.io.OutputStream;
 /**
  * Interface used to define the behaviour of a thread after the Python 
  * process finished correctly
- * @author WarenUT
+ * @author WarenUT TTAK
  */
 @FunctionalInterface
 public interface PythonOperation {

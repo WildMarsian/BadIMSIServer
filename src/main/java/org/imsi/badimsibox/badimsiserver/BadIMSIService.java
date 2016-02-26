@@ -471,8 +471,8 @@ public class BadIMSIService extends AbstractVerticle {
             BufferedReader bf = new BufferedReader(new InputStreamReader(in));
             bf.lines().forEach(line -> {
                 String[] words = line.split(" ");
-                Timsi timsi = new Timsi(words[0], words[1], words[2]);
-                vertx.eventBus().publish("imsi.new", timsi.toJson());
+                MobileTarget target = new MobileTarget(words[0], words[1], words[2]);
+                vertx.eventBus().publish("imsi.new", target.toJson());
             });
         });
     }
