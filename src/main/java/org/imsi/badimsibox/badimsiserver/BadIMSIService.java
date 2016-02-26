@@ -21,6 +21,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -72,10 +73,8 @@ public class BadIMSIService extends AbstractVerticle {
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
         router.route("/master/attack/sms/receive/").handler(this::receiveSMS); // must be synchronize
-        
-        // TIMSI
-        
 
+        // TIMSI
         // Creating routes
         router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(new BridgeOptions().addOutboundPermitted(new PermittedOptions())));
         router.route().handler(StaticHandler.create());
@@ -283,27 +282,45 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void startOpenBTS(RoutingContext rc) {
-        
-        
-        // TODO
-        // CI
-        // => récupération de la BTS utilisée dans OperatorList
-        
-        command.clear();
-        command.add("badimsicore_openbts");
-        command.add("start");
 
-        vertx.executeBlocking(future -> {
-            launchAndWait(future);
-        }, res -> {
-            JsonObject answer = new JsonObject();
-            answer.put("started", res.succeeded());
-            if (res.failed()) {
-                answer.put("error", res.cause().getMessage());
+        rc.request().bodyHandler(h -> {
+            JsonObject reqJson = formatJsonParams(h);
+            String ci = reqJson.getString("CI");
+            Bts selectedOperator = null;
+            for(Bts operator: operatorList){
+                if(operator.getCi().equals(ci)){
+                    selectedOperator = operator;
+                    break;
+                }
             }
-            rc.response().putHeader("content-type", "application/json").end(
-                    answer.encode()
-            );
+            // TODO
+            // CI
+            // => récupération de la BTS utilisée dans OperatorList
+            command.clear();
+            command.add("badimsicore_openbts");
+            command.add("start");
+            command.add("-i");
+            command.add(selectedOperator.getCi());
+            command.add("-l");
+            command.add(selectedOperator.getLac());
+            command.add("-n");
+            command.add(selectedOperator.getOperator().getMnc());
+            command.add("-c");
+            command.add(selectedOperator.getOperator().getMcc());
+            command.add("-p");
+            command.add("\".*\"");
+            vertx.executeBlocking(future -> {
+                launchAndWait(future);
+            }, res -> {
+                JsonObject answer = new JsonObject();
+                answer.put("started", res.succeeded());
+                if (res.failed()) {
+                    answer.put("error", res.cause().getMessage());
+                }
+                rc.response().putHeader("content-type", "application/json").end(
+                        answer.encode()
+                );
+            });
         });
     }
 
@@ -365,12 +382,10 @@ public class BadIMSIService extends AbstractVerticle {
     private void sendSMS(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
-            
-            
+
             // MSISDN Source (sender)
             // Message
             // Destination
-
             String sender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
@@ -409,9 +424,8 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void receiveSMS(RoutingContext rc) {
-        
+
         // synchrone thread !! => échanges directs avec interface
-        
         command.clear();
         command.add("badimsicore_sms_interceptor");
         command.add("-i");

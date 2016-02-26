@@ -47,7 +47,15 @@ public class NetworkOperator {
                 throw new IllegalStateException("Does not contain the right network code!!");
         }
     }
-
+    
+    /**
+     *
+     * @return
+     */
+    public String getMnc() {
+        return mnc;
+    }
+    
     /**
      *
      * @return
