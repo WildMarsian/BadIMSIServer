@@ -64,7 +64,7 @@ public class BadIMSIService extends AbstractVerticle {
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
         router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
-        router.route("/master/fakebts/timsis/").handler(this::launchTimsiReceptor);
+        //router.route("/master/fakebts/timsis/").handler(this::launchTimsiReceptor);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -294,8 +294,8 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void startOpenBTS(RoutingContext rc) {
-
         rc.request().bodyHandler(h -> {
+            launchTimsiReceptor(rc);
             JsonObject reqJson = formatJsonParams(h);
             String ci = reqJson.getString("CI");
             Bts selectedOperator = null;
