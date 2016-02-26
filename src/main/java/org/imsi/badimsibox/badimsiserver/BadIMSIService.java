@@ -295,7 +295,6 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void startOpenBTS(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
-            launchTimsiReceptor(rc);
             JsonObject reqJson = formatJsonParams(h);
             String ci = reqJson.getString("CI");
             Bts selectedOperator = null;
@@ -329,6 +328,8 @@ public class BadIMSIService extends AbstractVerticle {
                 answer.put("started", res.succeeded());
                 if (res.failed()) {
                     answer.put("error", res.cause().getMessage());
+                } else {
+                    launchTimsiReceptor(rc);
                 }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()

@@ -1,6 +1,8 @@
 package org.imsi.badimsibox.badimsiserver;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -55,11 +57,16 @@ public class SynchronousThreadManager {
                     Process p = manager.run(command);
                     p.waitFor();
                     if (p.exitValue() == 0) {
-                        operation.accept(p.getInputStream(), null); // TODO test null values
-                        Thread.sleep(refreshTime);
+                        operation.accept(p.getInputStream(), p.getOutputStream());
                     } else {
-                        BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly, trying again", p.exitValue());
+                        BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                        StringBuilder str = new StringBuilder();
+                        br.lines().forEach(line -> {
+                           str.append(line);
+                        });
+                        BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly, trying again", new Exception(str.toString()));
                     }
+                    Thread.sleep(refreshTime);
                 } catch (IOException | InterruptedException ex) {
                     BadIMSILogger.getLogger()
                             .log(Level.SEVERE, "Critical error while executing process treatment", ex);
