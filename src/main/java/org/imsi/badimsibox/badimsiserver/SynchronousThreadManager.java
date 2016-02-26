@@ -9,7 +9,6 @@ import java.util.logging.Level;
 /**
  * Class used to launch a new thread to execute periodically a python script and
  * launch a special treatment if the process is executed correctly
- *
  * @author WarenUT TTAK
  */
 public class SynchronousThreadManager {
@@ -54,11 +53,14 @@ public class SynchronousThreadManager {
                     return;
                 }
                 try {
+                    System.out.println("Running Process with command : '" + command + "'");
                     Process p = manager.run(command);
                     p.waitFor();
                     if (p.exitValue() == 0) {
+                        System.out.println("Process finished, starting treatment");
                         operation.accept(p.getInputStream(), p.getOutputStream());
                     } else {
+                        System.out.println("Process error, generating error in log");
                         BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
                         StringBuilder str = new StringBuilder();
                         br.lines().forEach(line -> {
@@ -66,6 +68,7 @@ public class SynchronousThreadManager {
                         });
                         BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly, trying again", new Exception(str.toString()));
                     }
+                    System.out.println("Waiting " + refreshTime + " millisecond before next execution");
                     Thread.sleep(refreshTime);
                 } catch (IOException | InterruptedException ex) {
                     BadIMSILogger.getLogger()
@@ -93,7 +96,6 @@ public class SynchronousThreadManager {
 
     /**
      * Used to check the current state of the thread.
-     *
      * @return True if the thread is running else return False
      */
     public boolean status() {
