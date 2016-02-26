@@ -21,8 +21,9 @@ public class SynchronousThreadManager {
     private Exception error = null;
 
     /**
-     * Contruct a new SynchronousThreadManager to execute a specified command 
+     * Contruct a new SynchronousThreadManager to execute a specified command
      * periodically each timeToSleep millisecond
+     *
      * @param command : the array of String which represent a command to execute
      * @param refreshTime : the time between two execution
      */
@@ -32,10 +33,11 @@ public class SynchronousThreadManager {
     }
 
     /**
-     * Used to launch the Python script in the thread managed by the class 
-     * then execute the specified operations contained in the functional 
-     * interface parameter. This operation will be launched only if the Python 
-     * script was correctly executed (the process returned 0)
+     * Used to launch the Python script in the thread managed by the class then
+     * execute the specified operations contained in the functional interface
+     * parameter. This operation will be launched only if the Python script was
+     * correctly executed (the process returned 0)
+     *
      * @param operation : the operations to execute
      */
     public void start(PythonOperation operation) {
@@ -71,8 +73,8 @@ public class SynchronousThreadManager {
     }
 
     /**
-     * Used to stop the started thread. Warning, it will not kill the thread 
-     * process but set the interrupted flag to True. The thread will check this 
+     * Used to stop the started thread. Warning, it will not kill the thread
+     * process but set the interrupted flag to True. The thread will check this
      * flag before each Python execution process.
      */
     public void stop() {
@@ -82,7 +84,8 @@ public class SynchronousThreadManager {
     }
 
     /**
-     * Used to check the current state of the thread. 
+     * Used to check the current state of the thread.
+     *
      * @return True if the thread is running else return False
      */
     public boolean status() {
@@ -91,6 +94,7 @@ public class SynchronousThreadManager {
 
     /**
      * Used to know the Exception thrown by the running thread in case of error
+     *
      * @return the Exception thrown
      */
     public Exception getError() {
