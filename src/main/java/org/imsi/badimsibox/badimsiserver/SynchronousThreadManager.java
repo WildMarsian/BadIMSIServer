@@ -53,6 +53,7 @@ public class SynchronousThreadManager {
                 }
                 try {
                     Process p = manager.run(command);
+                    p.waitFor();
                     if (p.exitValue() == 0) {
                         operation.accept(p.getInputStream(), null); // TODO test null values
                         Thread.sleep(refreshTime);
