@@ -172,13 +172,13 @@ public class BadIMSIService extends AbstractVerticle {
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
             signalWebForLongTreatments();
+            
+            operatorList.clear();
 
-            // Retrieving data from the web interface
             command.clear();
             command.add("badimsicore_listen");
             command.add("-o");
             command.add(reqJson.getString("operator"));
-
             String band = reqJson.getString("band");
             if (band != null && !band.equalsIgnoreCase("")) {
                 command.add("-b");
