@@ -20,12 +20,10 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  *
- * @author AisukoWasTaken AlisterWan TTAK WarenUT
+ * @author AisukoWasTaken AlisterWan TTAK WarenUT Andrebreton
  */
 public class BadIMSIService extends AbstractVerticle {
 
@@ -72,7 +70,7 @@ public class BadIMSIService extends AbstractVerticle {
 
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
-        router.route("/master/attack/sms/receive/").handler(this::receiveSMS); // must be synchronize
+        router.route("/master/attack/sms/receive/").handler(this::receiveSMS);
 
         // TIMSI
         // Creating routes
@@ -287,8 +285,8 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject reqJson = formatJsonParams(h);
             String ci = reqJson.getString("CI");
             Bts selectedOperator = null;
-            for(Bts operator: operatorList){
-                if(operator.getCi().equals(ci)){
+            for (Bts operator : operatorList) {
+                if (operator.getCi().equals(ci)) {
                     selectedOperator = operator;
                     break;
                 }
@@ -424,12 +422,23 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void receiveSMS(RoutingContext rc) {
-
-        // synchrone thread !! => échanges directs avec interface
         command.clear();
         command.add("badimsicore_sms_interceptor");
         command.add("-i");
         command.add("scripts/smqueue.txt");
+
+        SynchronousThreadManager smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 2000);
+        smsThreadManager.start((in, out, err) -> {
+            BufferedReader bf
+                    = new BufferedReader(new InputStreamReader(in));
+            bf.lines().forEach(line -> {
+                String removeParenthesis = line.replaceAll("[()]", "");
+                String[] splitted = removeParenthesis.split(",");
+                String first = splitted[0].replaceAll("['']", "");
+                String second = splitted[1].replaceAll("['']", "");
+                vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
+            });
+        });
 
         vertx.executeBlocking(future -> {
             launchAndWait(future);
