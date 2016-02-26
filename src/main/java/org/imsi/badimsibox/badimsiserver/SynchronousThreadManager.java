@@ -5,7 +5,8 @@ import java.util.Objects;
 import java.util.logging.Level;
 
 /**
- * Class to handle process treatment for real time operations
+ * Class used to launch a new thread to execute periodically a python script and
+ * launch a special treatment if the process is executed correctly
  *
  * @author WarenUT TTAK
  */
@@ -20,18 +21,22 @@ public class SynchronousThreadManager {
     private Exception error = null;
 
     /**
-     *
-     * @param command
-     * @param timeToSleep
+     * Contruct a new SynchronousThreadManager to execute a specified command 
+     * periodically each timeToSleep millisecond
+     * @param command : the array of String which represent a command to execute
+     * @param refreshTime : the time between two execution
      */
-    public SynchronousThreadManager(String[] command, int timeToSleep) {
+    public SynchronousThreadManager(String[] command, int refreshTime) {
         this.command = Objects.requireNonNull(command);
-        this.refreshTime = timeToSleep;
+        this.refreshTime = refreshTime;
     }
 
     /**
-     *
-     * @param operation
+     * Used to launch the Python script in the thread managed by the class 
+     * then execute the specified operations contained in the functional 
+     * interface parameter. This operation will be launched only if the Python 
+     * script was correctly executed (the process returned 0)
+     * @param operation : the operations to execute
      */
     public void start(PythonOperation operation) {
         if (thread != null) {
@@ -66,22 +71,26 @@ public class SynchronousThreadManager {
     }
 
     /**
-     *
+     * Used to stop the started thread. Warning, it will not kill the thread 
+     * process but set the interrupted flag to True. The thread will check that 
+     * flag before each Python execution process.
      */
     public void stop() {
-        thread.interrupt();
+        if (!thread.isInterrupted()) {
+            thread.interrupt();
+        }
     }
 
     /**
-     *
-     * @return
+     * Used to check the current state of the thread. 
+     * @return True if the thread is running else return False
      */
     public boolean status() {
         return thread.isInterrupted();
     }
 
     /**
-     *
+     * 
      * @return
      */
     public Exception getError() {

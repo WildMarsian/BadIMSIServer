@@ -6,7 +6,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
- *
+ * Class used to store data of one BadIMSI Session
  * @author AisukoWasTaken
  */
 public class Session {

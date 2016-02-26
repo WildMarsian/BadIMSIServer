@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Class to represent a BTS station
- * @author AlisterWan
+ * @author AlisterWan WarenUT
  */
 public class Bts {
 
@@ -14,12 +14,12 @@ public class Bts {
     private final List<String> arfcn;
 
     /**
-     * Constructor of the class
-     * @param mnc : 
-     * @param mcc : 
-     * @param lac : 
-     * @param ci : 
-     * @param arfcn : 
+     * 
+     * @param mnc : Mobile Network Code
+     * @param mcc : Mobile Country Code
+     * @param lac : Local Area Code
+     * @param ci : Cellule ID
+     * @param arfcn : List of Absolute Radio Frequency Channel Number
      */
     public Bts(String mnc, String mcc, String lac, String ci, List<String> arfcn) {
         this.operator = new NetworkOperator(mnc, mcc);
@@ -30,10 +30,10 @@ public class Bts {
 
     /**
      *
-     * @param operator
-     * @param lac
-     * @param ci
-     * @param arfcn
+     * @param operator : The operator using the BTS identified
+     * @param lac : Local Area Code
+     * @param ci : Cellule ID
+     * @param arfcn :  List of Absolute Radio Frequency Channel Number
      */
     public Bts(NetworkOperator operator, String lac, String ci, List<String> arfcn) {
         this.operator = operator;
