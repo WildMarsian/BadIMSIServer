@@ -1,9 +1,11 @@
 package org.imsi.badimsibox.badimsiserver;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Class to represent a BTS station
+ *
  * @author AlisterWan WarenUT
  */
 public class Bts {
@@ -14,7 +16,7 @@ public class Bts {
     private final List<String> arfcn;
 
     /**
-     * 
+     *
      * @param mnc : Mobile Network Code
      * @param mcc : Mobile Country Code
      * @param lac : Local Area Code
@@ -33,7 +35,7 @@ public class Bts {
      * @param operator : The operator using the BTS identified
      * @param lac : Local Area Code
      * @param ci : Cellule ID
-     * @param arfcn :  List of Absolute Radio Frequency Channel Number
+     * @param arfcn : List of Absolute Radio Frequency Channel Number
      */
     public Bts(NetworkOperator operator, String lac, String ci, List<String> arfcn) {
         this.operator = operator;
@@ -84,6 +86,31 @@ public class Bts {
 
     @Override
     public String toString() {
-        return this.operator + " " + this.lac + " " + this.ci + " " + this.arfcn;
+        return "Bts{" + "operator=" + operator + ", lac=" + lac + ", ci=" + ci + ", arfcn=" + arfcn + '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 41 * hash + Objects.hashCode(this.ci);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Bts other = (Bts) obj;
+        if (!Objects.equals(this.ci, other.ci)) {
+            return false;
+        }
+        return true;
     }
 }
