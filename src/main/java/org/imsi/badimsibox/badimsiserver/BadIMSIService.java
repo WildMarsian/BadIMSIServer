@@ -36,6 +36,8 @@ public class BadIMSIService extends AbstractVerticle {
     private final ArrayList<String> command = new ArrayList<>();
 
     private Session currentSession = Session.init(vertx);
+    private SynchronousThreadManager smsThreadManager = null;
+    private SynchronousThreadManager timsiThreadManager = null;
 
     @Override
     public void start() {
@@ -51,6 +53,7 @@ public class BadIMSIService extends AbstractVerticle {
         router.get("/master/session/start/:password").handler(this::startSession);
         router.get("/master/session/state").handler(this::getSessionState);
         router.get("/master/session/set/state/:state").handler(this::setSessionState);
+        router.route("/master/session/destroy/").handler(this::destroySession);
 
         // Sniffing
         router.post("/master/sniffing/selectOperator/").handler(this::selectOperatorToSniff);
@@ -61,6 +64,7 @@ public class BadIMSIService extends AbstractVerticle {
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
         router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
+        router.route("/master/fakebts/timsis/").handler(this::launchTimsiReceptor);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -70,10 +74,9 @@ public class BadIMSIService extends AbstractVerticle {
 
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
-        router.route("/master/attack/sms/receive/").handler(this::receiveSMS);
+        router.route("/master/attack/sms/receive/").handler(this::launchSmsReceptor);
 
-        // TIMSI
-        // Creating routes
+        // Handle EventBus
         router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(new BridgeOptions().addOutboundPermitted(new PermittedOptions())));
         router.route().handler(StaticHandler.create());
         vertx.createHttpServer().requestHandler(router::accept).listen(8080);
@@ -128,6 +131,17 @@ public class BadIMSIService extends AbstractVerticle {
                 new JsonObject().put("stateChanged", stateChanged).encode()
         );
     }
+    
+    /**
+     * 
+     * @param rc 
+     */
+    private void destroySession(RoutingContext rc) {
+        currentSession = Session.init(vertx);
+        if (smsThreadManager != null) {
+            smsThreadManager.stop();
+        }
+    }
 
     /**
      *
@@ -171,8 +185,8 @@ public class BadIMSIService extends AbstractVerticle {
     private void startSniffing(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
-            signalWebForLongTreatments();
-            
+            signalObserverForStartingLongTreatment();
+
             operatorList.clear();
 
             command.clear();
@@ -285,15 +299,16 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject reqJson = formatJsonParams(h);
             String ci = reqJson.getString("CI");
             Bts selectedOperator = null;
+            
             for (Bts operator : operatorList) {
                 if (operator.getCi().equals(ci)) {
                     selectedOperator = operator;
                     break;
                 }
             }
-            // TODO
-            // CI
-            // => récupération de la BTS utilisée dans OperatorList
+            
+            // What do we do if selectedOperator is null ? It is possible ?
+
             command.clear();
             command.add("badimsicore_openbts");
             command.add("start");
@@ -307,6 +322,7 @@ public class BadIMSIService extends AbstractVerticle {
             command.add(selectedOperator.getOperator().getMcc());
             command.add("-p");
             command.add("\".*\"");
+            
             vertx.executeBlocking(future -> {
                 launchAndWait(future);
             }, res -> {
@@ -378,20 +394,20 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void sendSMS(RoutingContext rc) {
+        if (timsiThreadManager != null) {
+            timsiThreadManager.stop();
+        }
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
 
-            // MSISDN Source (sender)
-            // Message
-            // Destination
-            String sender = reqJson.getString("sender");
+            String msisdnSender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
 
             command.clear();
-            command.add("badimsicore_sns_sender");
+            command.add("badimsicore_sms_sender");
             command.add(imsi);
-            command.add(sender);
+            command.add(msisdnSender);
             command.add(msg);
 
             vertx.executeBlocking(future -> {
@@ -421,13 +437,13 @@ public class BadIMSIService extends AbstractVerticle {
      *
      * @param rc
      */
-    private void receiveSMS(RoutingContext rc) {
+    private void launchSmsReceptor(RoutingContext rc) {
         command.clear();
         command.add("badimsicore_sms_interceptor");
         command.add("-i");
         command.add("scripts/smqueue.txt");
 
-        SynchronousThreadManager smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 2000);
+        smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         smsThreadManager.start((in, out) -> {
             BufferedReader bf
                     = new BufferedReader(new InputStreamReader(in));
@@ -439,25 +455,20 @@ public class BadIMSIService extends AbstractVerticle {
                 vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
             });
         });
-
-        vertx.executeBlocking(future -> {
-            launchAndWait(future);
-        }, res -> {
-            JsonObject answer = new JsonObject();
-            if (res.succeeded()) {
-                Process p = (Process) res.result();
-                BufferedReader br
-                        = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                br.lines().forEach(l -> {
-                    // TODO
-                    System.out.println(l);
-                });
-            } else {
-                answer.put("error", res.cause().getMessage());
-            }
-            rc.response().putHeader("content-type", "application/json").end(
-                    answer.encode()
-            );
+    }
+    
+    /**
+     * 
+     * @param rc 
+     */
+    private void launchTimsiReceptor(RoutingContext rc) {
+        command.clear();
+        command.add("badimsicore_openbts");
+        command.add("tmsis");
+        
+        timsiThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
+        timsiThreadManager.start((in, out) -> {
+            
         });
     }
 
@@ -488,33 +499,6 @@ public class BadIMSIService extends AbstractVerticle {
             e.printStackTrace();
     }
      */
-    public void getAllSms() throws IOException {
-        /* TODO make objects to launch the SMSReader in another thread.
-            One route to launch and another to get the current status. The last to get all data readed*/
-
- /*
-        String[] pythonLocationScript = {"./scripts/badimsicore_sms_interceptor.py", "-i", "./scripts/smqueue.txt"};
-
-        PythonCaller pc = new PythonCaller(pythonLocationScript, (in, out, err, returnCode) -> {
-            if (returnCode == 0) {
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-                bufferedReader.lines().forEach(l -> {
-                    String removeParenthesis = l.replaceAll("[()]", "");
-                    String[] splitted = removeParenthesis.split(",");
-                    String first = splitted[0].replaceAll("['']", "");
-                    String second = splitted[1].replaceAll("['']", "");
-                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
-                });
-            }
-        });
-
-        try {
-            pc.exec();
-        } catch (IOException | InterruptedException ie) {
-            ie.printStackTrace();
-        }*/
-    }
-
     /**
      * Blocking code executed by another thread handle by VertX
      *
@@ -593,9 +577,10 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
-     * Warn the Web interface a long treatment as began and must wait for answer
+     * Signal to the observer the launch of a long server treatment waiting
+     * return
      */
-    private void signalWebForLongTreatments() {
+    private void signalObserverForStartingLongTreatment() {
         JsonObject json = new JsonObject().put("started", true);
         this.vertx.eventBus().publish("observer.new", json.encode());
     }

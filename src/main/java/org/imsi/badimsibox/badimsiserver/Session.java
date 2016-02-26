@@ -68,15 +68,26 @@ public class Session {
         this.vertx.eventBus().publish("session.new", json.encode());
     }
 
+    /**
+     * 
+     * @return 
+     */
     public String getPassword() {
         return this.password;
     }
 
+    /**
+     * 
+     */
     public void updateTimestamp() {
         System.out.println(new Date() + ": Updated timestamp");
         this.timestamp = (int) (System.currentTimeMillis() / 1000L);
     }
 
+    /**
+     * 
+     * @return 
+     */
     public int getTimestamp() {
         return this.timestamp;
     }
