@@ -11,8 +11,8 @@ public class NetworkOperator {
 
     /**
      *
-     * @param mnc
-     * @param mcc
+     * @param mnc : Mobile Network Code
+     * @param mcc : Mobile Country Code
      */
     public NetworkOperator(String mnc, String mcc) {
         this.mnc = mnc;
@@ -20,8 +20,9 @@ public class NetworkOperator {
     }
 
     /**
-     *
-     * @return
+     * Determine what network own the specified Mobile Network Code. 
+     * Only France is supported for now.
+     * @return the network name of the MNC
      */
     public String getNetworkName() {
         switch (mnc) {

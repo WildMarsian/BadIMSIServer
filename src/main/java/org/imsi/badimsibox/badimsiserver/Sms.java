@@ -3,8 +3,9 @@ package org.imsi.badimsibox.badimsiserver;
 import io.vertx.core.json.JsonObject;
 
 /**
- *
- * @author AlisterWan
+ * Class to represent a Short Message Service object. It will store the data 
+ * contained in one SMS
+ * @author AlisterWan WarenUT
  */
 public class Sms {
 

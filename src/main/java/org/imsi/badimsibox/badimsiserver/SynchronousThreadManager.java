@@ -72,7 +72,7 @@ public class SynchronousThreadManager {
 
     /**
      * Used to stop the started thread. Warning, it will not kill the thread 
-     * process but set the interrupted flag to True. The thread will check that 
+     * process but set the interrupted flag to True. The thread will check this 
      * flag before each Python execution process.
      */
     public void stop() {
@@ -90,8 +90,8 @@ public class SynchronousThreadManager {
     }
 
     /**
-     * 
-     * @return
+     * Used to know the Exception thrown by the running thread in case of error
+     * @return the Exception thrown
      */
     public Exception getError() {
         synchronized (lock) {

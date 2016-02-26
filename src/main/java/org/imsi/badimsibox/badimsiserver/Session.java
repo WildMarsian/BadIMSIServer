@@ -18,7 +18,7 @@ public class Session {
     private int timestamp;
 
     /**
-     *
+     * Constructor of one session object
      * @param password
      * @param vertx
      */
@@ -30,7 +30,7 @@ public class Session {
     }
 
     /**
-     *
+     * 
      * @param vertx
      * @return
      */
