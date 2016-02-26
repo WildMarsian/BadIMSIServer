@@ -209,6 +209,7 @@ public class BadIMSIService extends AbstractVerticle {
                 reqJson.put(key, params.get(key));
             });
 
+            // Warn the web interface that the sniffing has began
             JsonObject json = new JsonObject().put("started", true);
             this.vertx.eventBus().publish("observer.new", json.encode());
 
@@ -216,12 +217,14 @@ public class BadIMSIService extends AbstractVerticle {
             command.clear();
             command.add("badimsicore_listen");
             command.add("-o");
-            command.add(reqJson.getString("operator"));
+            String operator = reqJson.getString("operator");
+            System.out.println("Operator : " + operator);
+            command.add(operator);
 
             String band = reqJson.getString("band");
             System.out.println("Band to sniff : " + band);
             if (band != null && !band.equalsIgnoreCase("")) {
-                System.out.println("Band not valid, sniffing on all frequencies");
+                System.out.println("Sniffing on : " + band);
                 command.add("-b");
                 command.add(band);
             }
