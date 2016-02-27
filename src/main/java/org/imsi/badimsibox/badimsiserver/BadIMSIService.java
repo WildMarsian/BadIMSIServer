@@ -309,7 +309,6 @@ public class BadIMSIService extends AbstractVerticle {
                 }
             }
 
-            // What do we do if selectedOperator is null ? It is possible ?
             command.clear();
             command.add("badimsicore_openbts");
             command.add("start");
@@ -409,9 +408,21 @@ public class BadIMSIService extends AbstractVerticle {
 
             command.clear();
             command.add("badimsicore_sms_sender");
-            command.add(imsi);
-            command.add(msisdnSender);
-            command.add(msg);
+
+            if (imsi != null && !imsi.isEmpty()) {
+                command.add("-r");
+                command.add(imsi);
+            }
+
+            if (msisdnSender != null && !msisdnSender.isEmpty()) {
+                command.add("-s");
+                command.add(msisdnSender);
+            }
+
+            if (msg != null && !msg.isEmpty()) {
+                command.add("-m");
+                command.add(msg);
+            }
 
             vertx.executeBlocking(future -> {
                 launchAndWait(future);
@@ -495,8 +506,8 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
-     * 
-     * @param rc 
+     *
+     * @param rc
      */
     private void getTmsiList(RoutingContext rc) {
         JsonArray answer = extractTmsiListInJson();
@@ -519,7 +530,7 @@ public class BadIMSIService extends AbstractVerticle {
             future.fail(ex);
         }
     }
-    
+
     /**
      * Used to extract correctly all TMSI identified from the tmsi list stored
      * by the tmsi receptor thread.
