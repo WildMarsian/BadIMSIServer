@@ -67,7 +67,6 @@ public class BadIMSIService extends AbstractVerticle {
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
         router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
-        //router.route("/master/fakebts/timsis/").handler(this::launchTimsiReceptor);
         router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
 
         // Jamming
@@ -78,6 +77,7 @@ public class BadIMSIService extends AbstractVerticle {
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
         router.route("/master/attack/sms/receive/").handler(this::launchSmsReceptor);
+        router.route("/master/attack/tmsis/").handler(this::getTmsiList);
 
         // Handle EventBus
         router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(new BridgeOptions().addOutboundPermitted(new PermittedOptions())));
@@ -486,16 +486,22 @@ public class BadIMSIService extends AbstractVerticle {
                         targetList.add(target);
                     }
                 });
-                JsonArray answer = new JsonArray();
-                targetList.forEach(target -> {
-                    answer.add(target.toJson());
-                });
-                System.out.println(answer);
+                JsonArray answer = extractTmsiListInJson();
                 vertx.eventBus().publish("imsi.new", answer);
             });
         }, res -> {
             // Do nothing : never used
         });
+    }
+
+    /**
+     * 
+     * @param rc 
+     */
+    private void getTmsiList(RoutingContext rc) {
+        JsonArray answer = extractTmsiListInJson();
+        rc.response().putHeader("content-type", "application/json").end(answer.encode()
+        );
     }
 
     /**
@@ -512,6 +518,21 @@ public class BadIMSIService extends AbstractVerticle {
             BadIMSILogger.getLogger().log(Level.SEVERE, null, ex);
             future.fail(ex);
         }
+    }
+    
+    /**
+     * Used to extract correctly all TMSI identified from the tmsi list stored
+     * by the tmsi receptor thread.
+     *
+     * @return a JsonArray contained all tmsi objects in JSON representation
+     */
+    private JsonArray extractTmsiListInJson() {
+        JsonArray answer = new JsonArray();
+        targetList.forEach(target -> {
+            answer.add(target.toJson());
+        });
+        System.out.println(answer);
+        return answer;
     }
 
     /**
