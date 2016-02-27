@@ -29,7 +29,7 @@ import java.util.logging.Level;
  */
 public class BadIMSIService extends AbstractVerticle {
 
-    static String defaultHeaders = "Origin, X-Requested-With, Content-Type, Accept";
+    static String defaultHeaders = "x-requested-with, Content-Type, origin, authorization, accept, client-security-token";
     static String defaultMethods = "GET, POST, OPTIONS, PUT, HEAD, DELETE, CONNECT";
     static String defaultIpAndPorts = "*";
 
