@@ -460,14 +460,19 @@ public class BadIMSIService extends AbstractVerticle {
         smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
             smsThreadManager.start((in, out) -> {
+                System.out.println("Extracting SMS");
                 BufferedReader bf
                         = new BufferedReader(new InputStreamReader(in));
                 bf.lines().forEach(line -> {
+                    System.out.println("Line readed : " + line);
+                    System.out.println("Now parsing the SMS");
                     String removeParenthesis = line.replaceAll("[()]", "");
                     String[] splitted = removeParenthesis.split(",");
                     String first = splitted[0].replaceAll("['']", "");
                     String second = splitted[1].replaceAll("['']", "");
-                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
+                    Sms sms = new Sms(first, second);
+                    System.out.println("SMS decoded : " + sms);
+                    vertx.eventBus().publish("sms.new", sms.toJson());
                 });
             });
         }, res -> {
