@@ -497,7 +497,11 @@ public class BadIMSIService extends AbstractVerticle {
                         targetList.add(target);
                     }
                 });
-                JsonArray answer = extractTmsiListInJson();
+                JsonArray answer = new JsonArray();
+                targetList.forEach(target -> {
+                    answer.add(target.toJson());
+                });
+                System.out.println(answer);
                 vertx.eventBus().publish("imsi.new", answer);
             });
         }, res -> {
