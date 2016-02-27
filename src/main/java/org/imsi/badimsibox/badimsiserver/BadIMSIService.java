@@ -472,7 +472,7 @@ public class BadIMSIService extends AbstractVerticle {
     private void launchTimsiReceptor(RoutingContext rc) {
         targetList.clear();
         command.clear();
-        
+
         command.add("badimsicore_tmsis");
         timsiThreadManager
                 = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
@@ -480,17 +480,19 @@ public class BadIMSIService extends AbstractVerticle {
             timsiThreadManager.start((in, out) -> {
                 // TODO AisukoWasTaken !!
                 BufferedReader bf = new BufferedReader(new InputStreamReader(in));
-                bf.lines().skip(2).forEach(line -> {
-                    String[] words = line.split(" ");
-                    MobileTarget target
-                            = new MobileTarget(words[0], words[1], words[2], "", "", "", "");
-                    
-                    targetList.add(target);
+                bf.lines().skip(2).filter(line -> !line.equals("None")).forEach(line -> {
+                    if (!line.isEmpty()) {
+                        String[] words = line.split(" ");
+                        MobileTarget target
+                                = new MobileTarget(words[0], words[1], words[2], "", "", "", "");
+
+                        targetList.add(target);
+                    }
                 });
             });
         }, res -> {
             JsonArray answer = new JsonArray();
-            targetList.forEach(target->{
+            targetList.forEach(target -> {
                 answer.add(target.toJson());
             });
             System.out.println(answer);
