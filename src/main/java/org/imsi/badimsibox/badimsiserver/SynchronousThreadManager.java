@@ -3,6 +3,7 @@ package org.imsi.badimsibox.badimsiserver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -53,7 +54,7 @@ public class SynchronousThreadManager {
                     return;
                 }
                 try {
-                    System.out.println("Running Process with command : '" + command + "'");
+                    System.out.println("Running Process with command : '" + Arrays.toString(command) + "'");
                     Process p = manager.run(command);
                     p.waitFor();
                     if (p.exitValue() == 0) {
