@@ -473,9 +473,7 @@ public class BadIMSIService extends AbstractVerticle {
         targetList.clear();
         command.clear();
         
-        command.add("badimsicore_openbts");
-        command.add("tmsis");
-
+        command.add("badimsicore_tmsis");
         timsiThreadManager
                 = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
