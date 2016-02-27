@@ -19,6 +19,8 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.logging.Level;
 
 /**
@@ -33,6 +35,7 @@ public class BadIMSIService extends AbstractVerticle {
 
     private final PythonManager pythonManager = new PythonManager();
     private final ArrayList<Bts> operatorList = new ArrayList<>();
+    private final HashSet<MobileTarget> targetList = new HashSet<>();
     private final ArrayList<String> command = new ArrayList<>();
 
     private Session currentSession = Session.init(vertx);
@@ -467,7 +470,9 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void launchTimsiReceptor(RoutingContext rc) {
+        targetList.clear();
         command.clear();
+        
         command.add("badimsicore_openbts");
         command.add("tmsis");
 
@@ -481,11 +486,17 @@ public class BadIMSIService extends AbstractVerticle {
                     String[] words = line.split(" ");
                     MobileTarget target
                             = new MobileTarget(words[0], words[1], words[2], "", "", "", "");
-                    vertx.eventBus().publish("imsi.new", target.toJson());
+                    
+                    targetList.add(target);
                 });
             });
         }, res -> {
-            // Do nothing
+            JsonArray answer = new JsonArray();
+            targetList.forEach(target->{
+                answer.add(target.toJson());
+            });
+            System.out.println(answer);
+            vertx.eventBus().publish("imsi.new", answer);
         });
     }
 
