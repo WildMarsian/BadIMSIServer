@@ -459,9 +459,8 @@ public class BadIMSIService extends AbstractVerticle {
                     vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
                 });
             });
-            future.complete();
         }, res -> {
-            // Do nothing
+            // Do nothing : never used
         });
     }
 
@@ -470,7 +469,6 @@ public class BadIMSIService extends AbstractVerticle {
      * @param rc
      */
     private void launchTimsiReceptor(RoutingContext rc) {
-        targetList.clear();
         command.clear();
 
         command.add("badimsicore_tmsis");
@@ -478,25 +476,25 @@ public class BadIMSIService extends AbstractVerticle {
                 = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
             timsiThreadManager.start((in, out) -> {
-                // TODO AisukoWasTaken !!
+                targetList.clear();
                 BufferedReader bf = new BufferedReader(new InputStreamReader(in));
                 bf.lines().skip(2).filter(line -> !line.equals("None")).forEach(line -> {
                     if (!line.isEmpty()) {
                         String[] words = line.split(" ");
                         MobileTarget target
                                 = new MobileTarget(words[0], words[1], words[2], "", "", "", "");
-
                         targetList.add(target);
                     }
                 });
+                JsonArray answer = new JsonArray();
+                targetList.forEach(target -> {
+                    answer.add(target.toJson());
+                });
+                System.out.println(answer);
+                vertx.eventBus().publish("imsi.new", answer);
             });
         }, res -> {
-            JsonArray answer = new JsonArray();
-            targetList.forEach(target -> {
-                answer.add(target.toJson());
-            });
-            System.out.println(answer);
-            vertx.eventBus().publish("imsi.new", answer);
+            // Do nothing : never used
         });
     }
 
