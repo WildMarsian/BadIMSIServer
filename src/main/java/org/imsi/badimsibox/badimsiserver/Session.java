@@ -49,8 +49,8 @@ public class Session {
     }
 
     /**
-     *
-     * @return
+     * Get the current session state
+     * @return An int of the state of the session
      */
     public int getSessionState() {
         return this.state;

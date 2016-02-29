@@ -20,7 +20,6 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.logging.Level;
