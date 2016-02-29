@@ -462,6 +462,7 @@ public class BadIMSIService extends AbstractVerticle {
         command.add("badimsicore_sms_interceptor");
         command.add("-i");
         command.add("/var/log/syslog");
+        System.out.println("Launching SMS receptor...");
 
         smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
