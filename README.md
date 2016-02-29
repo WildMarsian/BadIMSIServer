@@ -2,7 +2,7 @@
 
 ## 1. Requirements 
 
-BadIMSIServer uses the JDK 8. The following dependencies need to be installed on the host before using BadIMSIServer :
+BadIMSIServer uses the JDK 8. The following dependencies need to be installed on the host before:
 ```
 sudo add-apt-repository ppa:webupd8team/java -y
 sudo apt-get update
