@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.logging.Level;
 
 /**
+ * Class containing all treatment methods with access by the Web interface using
+ * routes
  *
  * @author AisukoWasTaken AlisterWan TTAK WarenUT Andrebreton
  */
@@ -87,10 +89,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to initialise a session for all Observers of the Master
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void startSession(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Starting a new session");
         String password = rc.request().getParam("password");
         this.currentSession = new Session(password, vertx);
         this.currentSession.updateTimestamp();
@@ -100,10 +104,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to check the status of the current session
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void getSessionState(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Sending interface the current session state");
         if (this.currentSession == null) {
             rc.response().putHeader("content-type", "application/json").end(
                     new JsonObject().put("state", -1).encode()
@@ -120,10 +126,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to update to state of the current session
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void setSessionState(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Updating the current session state");
         String stateString = rc.request().getParam("state");
         int stateInt = Integer.parseInt(stateString);
         boolean stateChanged = (stateInt > -1) && (stateInt < 5)
@@ -137,19 +145,23 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to delete the current session
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void destroySession(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Trying to destroy the current session");
         currentSession = Session.init(vertx);
         if (smsThreadManager != null) {
             smsThreadManager.stop();
+            BadIMSILogger.getLogger().log(Level.FINE, "Destruction of the current session complete");
         }
     }
 
     /**
+     * Used to select an operator for the sniffing process
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void selectOperatorToSniff(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
@@ -165,8 +177,9 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to select the ARFCN band to sniff
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void selectBandToSniff(RoutingContext rc) {
         rc.request().bodyHandler(h -> {
@@ -183,16 +196,19 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to launch the sniffing attack
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void startSniffing(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Starting sniffing process");
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
             signalObserverForStartingLongTreatment();
 
             operatorList.clear();
 
+            // Setting command to execute
             command.clear();
             command.add("badimsicore_listen");
             command.add("-o");
@@ -203,7 +219,7 @@ public class BadIMSIService extends AbstractVerticle {
                 command.add(band);
             }
 
-            // Blocking code
+            // Blocking code to execute in another thread until it answer
             vertx.executeBlocking(future -> {
                 launchAndWait(future);
             }, res -> {
@@ -224,9 +240,11 @@ public class BadIMSIService extends AbstractVerticle {
                     answer.put("status", "data");
                     JsonArray array = extractAndFormatBtsList();
                     answer.put("content", array);
+                    BadIMSILogger.getLogger().log(Level.FINE, "Sniffing process end with success");
                 } else {
                     answer.put("status", "error");
                     answer.put("content", res.cause().getMessage());
+                    BadIMSILogger.getLogger().log(Level.SEVERE, "There was a problem with the sniffing process", res.cause());
                 }
                 this.vertx.eventBus().publish("observer.new", answer.encode());
                 rc.response().putHeader("content-type", "application/json").end(
@@ -237,10 +255,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to start the jamming process
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void startJamming(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Starting the jammer process");
         command.clear();
         command.add("jamming");
         command.add("start");
@@ -251,7 +271,10 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject answer = new JsonObject();
             answer.put("started", res.succeeded());
             if (res.failed()) {
+                BadIMSILogger.getLogger().log(Level.SEVERE, "Starting jamming process failed");
                 answer.put("error", res.cause().getMessage());
+            } else {
+                BadIMSILogger.getLogger().log(Level.FINE, "Starting jamming process with success");
             }
             rc.response().putHeader("content-type", "application/json").end(
                     answer.encode()
@@ -260,10 +283,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to select the jamming target inside the sniffing listening list
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void selectOperatorToJamm(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Selecting operator to jam");
         JsonArray array = extractAndFormatBtsList();
         rc.response().putHeader("content-type", "application/json").end(
                 array.encode()
@@ -271,10 +296,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to stop the jamming operation
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void stopJamming(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Stopping the jammer process");
         command.clear();
         command.add("jamming");
         command.add("stop");
@@ -285,7 +312,10 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject answer = new JsonObject();
             answer.put("stopped", res.succeeded());
             if (res.failed()) {
+                BadIMSILogger.getLogger().log(Level.SEVERE, "Stopping jamming process failed");
                 answer.put("error", res.cause().getMessage());
+            } else {
+                BadIMSILogger.getLogger().log(Level.FINE, "Stopping jamming process with success");
             }
             rc.response().putHeader("content-type", "application/json").end(
                     answer.encode()
@@ -294,10 +324,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to launch the OpenBTS service
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void startOpenBTS(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.FINE, "Starting OpenBTS process");
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
             String ci = reqJson.getString("CI");
@@ -308,6 +340,10 @@ public class BadIMSIService extends AbstractVerticle {
                     selectedOperator = operator;
                     break;
                 }
+            }
+
+            if (command == null) {
+                BadIMSILogger.getLogger().log(Level.SEVERE, "There was no choice selected into the sniffing operation list");
             }
 
             command.clear();
@@ -331,8 +367,10 @@ public class BadIMSIService extends AbstractVerticle {
                 answer.put("started", res.succeeded());
                 if (res.failed()) {
                     answer.put("error", res.cause().getMessage());
+                    BadIMSILogger.getLogger().log(Level.SEVERE, "Starting OpenBTS service failed", res.cause());
                 } else {
-                    launchTimsiReceptor(rc);
+                    BadIMSILogger.getLogger().log(Level.FINE, "Starting OpenBTS service with success, launching TMSI receptor thread");
+                    launchTmsiReceptor(rc);
                 }
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
@@ -342,8 +380,9 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to export the BTS sniffing list
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void getBTSList(RoutingContext rc) {
         JsonArray array = extractAndFormatBtsList();
@@ -354,9 +393,10 @@ public class BadIMSIService extends AbstractVerticle {
 
     /**
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void selectOperatorToSpoof(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Selecting operator to spoof");
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
             String operator = reqJson.getString("operator");
@@ -370,10 +410,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to stop the OpenBTS service
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void stopOpenBTS(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Stopping OpenBTS service");
         command.clear();
         command.add("badimsicore_openbts");
         command.add("stop");
@@ -384,7 +426,10 @@ public class BadIMSIService extends AbstractVerticle {
             JsonObject answer = new JsonObject();
             answer.put("stopped", res.succeeded());
             if (res.failed()) {
+                BadIMSILogger.getLogger().log(Level.SEVERE, "Stopping OpenBTS service failed", res.cause());
                 answer.put("error", res.cause().getMessage());
+            } else {
+                BadIMSILogger.getLogger().log(Level.FINE, "Stopping OpenBTS service with success");
             }
             rc.response().putHeader("content-type", "application/json").end(
                     answer.encode()
@@ -393,10 +438,12 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to prepare and send SMS to identified Mobile Targets
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void sendSMS(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Sending new SMS to Mobile station");
         if (timsiThreadManager != null) {
             timsiThreadManager.stop();
         }
@@ -406,9 +453,12 @@ public class BadIMSIService extends AbstractVerticle {
             String msisdnSender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
+
+            // TODO : what is this ?????
             Sms sms = new Sms(Date.from(Instant.now()).toString(), msg);
-            System.out.println(sms.toJson());
             vertx.eventBus().publish("sms.sent", sms.toJson());
+            // #
+
             command.clear();
             command.add("badimsicore_sms_sender");
 
@@ -433,19 +483,12 @@ public class BadIMSIService extends AbstractVerticle {
                 JsonObject answer = new JsonObject();
                 answer.put("sended", res.succeeded());
                 if (res.succeeded()) {
-                    Process p = (Process) res.result();
-                    BufferedReader br
-                            = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    br.lines().forEach(l -> {
-                        // TODO
-                        System.out.println(l);
-                    });
+                    BadIMSILogger.getLogger().log(Level.FINE, "Sending SMS with success");
                 } else {
+                    BadIMSILogger.getLogger().log(Level.SEVERE, "Sending SMS failed", res.cause());
                     answer.put("error", res.cause().getMessage());
                 }
-                
-                
-                
+
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -454,10 +497,13 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to launch a new Thread in along the main process to receive SMS in
+     * live time
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void launchSmsReceptor(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Launching the SMS reception service");
         command.clear();
         command.add("badimsicore_sms_interceptor");
         command.add("-i");
@@ -467,21 +513,16 @@ public class BadIMSIService extends AbstractVerticle {
         smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
         vertx.executeBlocking(future -> {
             smsThreadManager.start((in, out) -> {
-                System.out.println("Extracting SMS");
+                BadIMSILogger.getLogger().log(Level.INFO, "Extracting SMS");
                 BufferedReader bf
                         = new BufferedReader(new InputStreamReader(in));
                 bf.lines().forEach(line -> {
-                    System.out.println("Line readed : " + line);
-                    System.out.println("Now parsing the SMS");
-                    
                     String removeParenthesis = line.replaceAll("[()]", "");
                     String[] splitted = removeParenthesis.split(",");
                     String first = splitted[0].replaceAll("['']", "");
                     String second = splitted[1].replaceAll("['']", "");
-                    Sms sms = new Sms(first, second);
-                    
-                    System.out.println("SMS decoded : " + sms);
-                    vertx.eventBus().publish("sms.new", sms.toJson());
+                    BadIMSILogger.getLogger().log(Level.INFO, "Sending SMS content to the Web interface");
+                    vertx.eventBus().publish("sms.new", new Sms(first, second).toJson());
                 });
             });
         }, res -> {
@@ -490,10 +531,13 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to launch a new Thread in along the main process to receive TMSI in
+     * live time
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
-    private void launchTimsiReceptor(RoutingContext rc) {
+    private void launchTmsiReceptor(RoutingContext rc) {
+        BadIMSILogger.getLogger().log(Level.INFO, "Launching the TMSI reception service");
         command.clear();
 
         command.add("badimsicore_tmsis");
@@ -511,11 +555,11 @@ public class BadIMSIService extends AbstractVerticle {
                         targetList.add(target);
                     }
                 });
+                BadIMSILogger.getLogger().log(Level.INFO, "Creating JSON Object with TMSI received");
                 JsonArray answer = new JsonArray();
                 targetList.forEach(target -> {
                     answer.add(target.toJson());
                 });
-                System.out.println(answer);
                 vertx.eventBus().publish("imsi.new", answer);
             });
         }, res -> {
@@ -524,8 +568,10 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to answer the Web interface by sending it all TMSI number idenfitied
+     * during the sniffing process
      *
-     * @param rc
+     * @param rc : The routing context handling the VertX data
      */
     private void getTmsiList(RoutingContext rc) {
         JsonArray answer = extractTmsiListInJson();
@@ -592,10 +638,11 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to Map all post/get arguments sent by the Web interface to the
+     * server and contained in the buffer
      *
-     * @param params
-     * @param reqJson
-     * @param h
+     * @param params : The Map to fill with data
+     * @param h : The buffer containing all data
      */
     private void parseJsonParams(Map<String, String> params, Buffer h) {
         String bufferMessage = h.toString();
@@ -612,8 +659,10 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to format the JSON objects received from the web interface and
+     * containing post/get arguments
      *
-     * @param h
+     * @param h : The buffer containing the data
      */
     private JsonObject formatJsonParams(Buffer h) {
         JsonObject reqJson = new JsonObject();
@@ -626,8 +675,7 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
-     * Signal to the observer the launch of a long server treatment waiting
-     * return
+     * Signal to the observer a long time treatment as begin
      */
     private void signalObserverForStartingLongTreatment() {
         JsonObject json = new JsonObject().put("started", true);
