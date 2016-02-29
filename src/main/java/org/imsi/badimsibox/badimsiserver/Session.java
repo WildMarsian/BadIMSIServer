@@ -1,12 +1,13 @@
 package org.imsi.badimsibox.badimsiserver;
 
-import java.util.Date;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Class used to store data of one BadIMSI Session
+ * Class used to store data of one BadIMSI Session. A session state represent
+ * the position in the path to access final functionalities of the server
+ * application.
+ *
  * @author AisukoWasTaken
  */
 public class Session {
@@ -19,8 +20,9 @@ public class Session {
 
     /**
      * Constructor of one session object
-     * @param password
-     * @param vertx
+     *
+     * @param password : the password used to connect into the session
+     * @param vertx : the vertx server instance, used to access to EventBus
      */
     public Session(String password, Vertx vertx) {
         this.password = password;
@@ -30,9 +32,11 @@ public class Session {
     }
 
     /**
-     * 
-     * @param vertx
-     * @return
+     * Used to create a default session without passwords to instantiate the
+     * server
+     *
+     * @param vertx : the vertx server instalce
+     * @return the Session created without password
      */
     public static Session init(Vertx vertx) {
         Session init = new Session("", vertx);
@@ -40,9 +44,11 @@ public class Session {
     }
 
     /**
+     * Used to compare a given password with the session password. Validating
+     * the password entered by one user trying to connect
      *
-     * @param inputPassword
-     * @return
+     * @param inputPassword : The password to check
+     * @return : True if session and given password are equals else False
      */
     public boolean checkPassword(String inputPassword) {
         return inputPassword.equals(this.password);
@@ -50,43 +56,43 @@ public class Session {
 
     /**
      * Get the current session state
-     * @return An int of the state of the session
+     *
+     * @return a int value to represent the session state
      */
     public int getSessionState() {
         return this.state;
     }
 
     /**
-     *
+     * Used to change the session state
      */
     public void nextSessionState() {
         this.state++;
-        System.out.println(new Date() + ": Next sesssion state: " + this.state);
         JsonObject json = new JsonObject();
-        json.put("state", new String(Integer.toString(this.state)));
-        System.out.println("Data sent to observer: " + json.encode());
+        json.put("state", Integer.toString(this.state));
         this.vertx.eventBus().publish("session.new", json.encode());
     }
 
     /**
-     * 
-     * @return 
+     * Used to export the password of the current session
+     *
+     * @return
      */
     public String getPassword() {
         return this.password;
     }
 
     /**
-     * 
+     * Used to update the timestamp of the current session
      */
     public void updateTimestamp() {
-        System.out.println(new Date() + ": Updated timestamp");
         this.timestamp = (int) (System.currentTimeMillis() / 1000L);
     }
 
     /**
-     * 
-     * @return 
+     * Used to export the timestamp of the current session
+     *
+     * @return
      */
     public int getTimestamp() {
         return this.timestamp;

@@ -6,6 +6,10 @@ import java.util.Objects;
 /**
  * Class to represent a BTS station
  *
+ * Used to store data to represent a BTS station identified during the sniffing
+ * process. Those data are used by the Fake BTS to broadcast valid informations
+ * to the Mobile Phone near it resulting of their connection.
+ *
  * @author AlisterWan WarenUT
  */
 public class Bts {
@@ -16,6 +20,7 @@ public class Bts {
     private final List<String> arfcn;
 
     /**
+     * Used to create an instance of one BTS storage data
      *
      * @param mnc : Mobile Network Code
      * @param mcc : Mobile Country Code
@@ -31,6 +36,7 @@ public class Bts {
     }
 
     /**
+     * Used to create an instance of one BTS storage data
      *
      * @param operator : The operator using the BTS identified
      * @param lac : Local Area Code
@@ -45,40 +51,46 @@ public class Bts {
     }
 
     /**
+     * Used to export the network name handled by the BTS
      *
-     * @return
+     * @return a String to represent the name of the network handled
      */
     public String getOperatorByMnc() {
         return operator.getNetworkName();
     }
 
     /**
+     * Used to export the name of the operator, owner of the BTS
      *
-     * @return
+     * @return the Network Operator instance of this network operator BTS
      */
     public NetworkOperator getOperator() {
         return operator;
     }
 
     /**
+     * Used to export the Local Area Code of this BTS
      *
-     * @return
+     * @return a String containeing the LAC Code
      */
     public String getLac() {
         return lac;
     }
 
     /**
+     * Used to export the Cellule ID of the BTS
      *
-     * @return
+     * @return a String containing the Cellule ID of the BTS
      */
     public String getCi() {
         return ci;
     }
 
     /**
+     * Used to export the ARFCN list of this BTS
      *
-     * @return
+     * @return a List interface of String containing all ARFCN detected from
+     * this BTS
      */
     public List<String> getArfcn() {
         return arfcn;
