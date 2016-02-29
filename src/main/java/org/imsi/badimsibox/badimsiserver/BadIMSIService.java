@@ -19,7 +19,9 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.logging.Level;
 
@@ -405,7 +407,9 @@ public class BadIMSIService extends AbstractVerticle {
             String msisdnSender = reqJson.getString("sender");
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
-
+            Sms sms = new Sms(Date.from(Instant.now()).toString(), msg);
+            System.out.println(sms.toJson());
+            vertx.eventBus().publish("sms.sent", sms.toJson());
             command.clear();
             command.add("badimsicore_sms_sender");
 
@@ -440,6 +444,9 @@ public class BadIMSIService extends AbstractVerticle {
                 } else {
                     answer.put("error", res.cause().getMessage());
                 }
+                
+                
+                
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
