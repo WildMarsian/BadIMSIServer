@@ -24,13 +24,16 @@ public class MobileTarget {
      * Constructor of the class
      *
      * @param imsi : The unique identifier of a mobile phone SIM user
-     * @param tmsi : TODO
-     * @param imei : TODO
-     * @param auth : TODO
+     * @param tmsi : The Temporary Mobile Subscriber Identity used to identify
+     * the Mobile Phone in the network
+     * @param imei : The unique identifier of a mobile Phone hardware
+     * @param auth : The AUTH value of the Mobile Phone
      * @param created : Date of the connection of the Mobile Phone to the fake
      * BTS
-     * @param accessed : TODO
-     * @param tmsiAssigned : TODO
+     * @param accessed : Date of the connection access of the Mobile Phone to
+     * the fake BTS
+     * @param tmsiAssigned : The Temporary Mobile Subscriber Identity used to
+     * identify the Mobile Phone in the network assigned by the Fake BTS
      */
     public MobileTarget(String imsi, String tmsi, String imei, String auth, String created, String accessed, String tmsiAssigned) {
         this.imsi = imsi;
@@ -53,18 +56,18 @@ public class MobileTarget {
     }
 
     /**
-     * TODO
+     * Used to export the IMSI code of the Mobile Phone
      *
-     * @return
+     * @return a String containing the IMSI Code of the Mobile Phone
      */
     public String getImsi() {
         return imsi;
     }
 
     /**
-     * TODO
+     * Used to export the TMSI code of the Mobile Phone
      *
-     * @return
+     * @return a String containing the TMSI Code of the Mobile Phone
      */
     public String getTmsi() {
         return tmsi;
@@ -80,7 +83,7 @@ public class MobileTarget {
     }
 
     /**
-     * TODO
+     * Used to export the AUTH value of the Mobile Phone
      *
      * @return
      */
@@ -99,18 +102,19 @@ public class MobileTarget {
     }
 
     /**
-     * TODO
+     * Used to export the date of the Mobile Phone access to the network
      *
-     * @return
+     * @return a String containing the date of the access to the network
      */
     public String getAccessed() {
         return accessed;
     }
 
     /**
-     * TODO
+     * Used to export the TMSI code assigned to the Mobile Phone by the Fake BTS
      *
-     * @return
+     * @return a String containing the TMSI value of the Mobile Phone on the
+     * Fake BTS network
      */
     public String getTmsiAssigned() {
         return tmsiAssigned;
