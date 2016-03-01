@@ -454,11 +454,6 @@ public class BadIMSIService extends AbstractVerticle {
             String msg = reqJson.getString("message");
             String imsi = reqJson.getString("imsi");
 
-            // TODO : what is this ?????
-            Sms sms = new Sms(Date.from(Instant.now()).toString(), msg);
-            vertx.eventBus().publish("sms.sent", sms.toJson());
-            // #
-
             command.clear();
             command.add("badimsicore_sms_sender");
 
@@ -484,11 +479,13 @@ public class BadIMSIService extends AbstractVerticle {
                 answer.put("sended", res.succeeded());
                 if (res.succeeded()) {
                     BadIMSILogger.getLogger().log(Level.FINE, "Sending SMS with success");
+                    Sms sms = new Sms(Date.from(Instant.now()).toString(), msg);
+                    vertx.eventBus().publish("sms.sent", sms.toJson());
                 } else {
                     BadIMSILogger.getLogger().log(Level.SEVERE, "Sending SMS failed", res.cause());
                     answer.put("error", res.cause().getMessage());
                 }
-
+                
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
