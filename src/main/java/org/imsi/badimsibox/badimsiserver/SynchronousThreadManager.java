@@ -102,6 +102,10 @@ public class SynchronousThreadManager {
                             str.append(line);
                         });
                         numberOfFail++;
+                        if (numberOfFail > maximumNumberOfFail) {
+                            // Stopping thread
+                            Thread.currentThread().interrupt();
+                        }
                         BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly in thread" + name + ", trying again", new Exception(str.toString()));
                     }
                     Thread.sleep(refreshTime);
@@ -110,10 +114,7 @@ public class SynchronousThreadManager {
                     synchronized (lock) {
                         error = ex;
                     }
-                    if (numberOfFail > maximumNumberOfFail) {
-                        // Stopping thread
-                        Thread.currentThread().interrupt();
-                    }
+                    Thread.currentThread().interrupt();
                 } catch (InterruptedException ex) {
                     BadIMSILogger.getLogger().log(Level.SEVERE, "Synchronous thread " + name + " stopped", ex);
                     return;
