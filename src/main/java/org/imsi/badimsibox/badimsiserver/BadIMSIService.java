@@ -43,7 +43,7 @@ public class BadIMSIService extends AbstractVerticle {
 
     private Session currentSession = Session.init(vertx);
     private SynchronousThreadManager smsThreadManager = null;
-    private SynchronousThreadManager timsiThreadManager = null;
+    private SynchronousThreadManager tmsiThreadManager = null;
 
     @Override
     public void start() {
@@ -70,12 +70,12 @@ public class BadIMSIService extends AbstractVerticle {
         router.post("/master/fakebts/start/").handler(this::startOpenBTS);
         router.post("/master/fakebts/selectOperator/").handler(this::selectOperatorToSpoof);
         router.route("/master/fakebts/getBTSList/").handler(this::getBTSList);
-        router.post("/master/fakebts/stop/").handler(this::stopOpenBTS);
+        router.post("/master/fakebts/stop").handler(this::stopOpenBTS);
 
         // Jamming
         router.post("/master/jamming/start/").handler(this::startJamming);
         router.route("/master/jamming/operator/").handler(this::selectOperatorToJamm);
-        router.get("/master/jamming/stop").handler(this::stopJamming);
+        router.get("/master/jamming/stop/").handler(this::stopJamming);
 
         // SMS
         router.post("/master/attack/sms/send/").handler(this::sendSMS);
@@ -154,7 +154,11 @@ public class BadIMSIService extends AbstractVerticle {
         currentSession = Session.init(vertx);
         if (smsThreadManager != null) {
             smsThreadManager.stop();
-            BadIMSILogger.getLogger().log(Level.FINE, "Destruction of the current session complete");
+            BadIMSILogger.getLogger().log(Level.FINE, "Stopping SMS Manager");
+        }
+        if (tmsiThreadManager != null) {
+            tmsiThreadManager.stop();
+            BadIMSILogger.getLogger().log(Level.FINE, "Stopping TMSI Manager");
         }
     }
 
@@ -202,6 +206,10 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void startSniffing(RoutingContext rc) {
         BadIMSILogger.getLogger().log(Level.INFO, "Starting sniffing process");
+        if (smsThreadManager != null) {
+            smsThreadManager.stop();
+        }
+
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
             signalObserverForStartingLongTreatment();
@@ -342,7 +350,7 @@ public class BadIMSIService extends AbstractVerticle {
                 }
             }
 
-            if (command == null) {
+            if (selectedOperator == null) {
                 BadIMSILogger.getLogger().log(Level.SEVERE, "There was no choice selected into the sniffing operation list");
             }
 
@@ -392,6 +400,7 @@ public class BadIMSIService extends AbstractVerticle {
     }
 
     /**
+     * Used to select the operator to spoof
      *
      * @param rc : The routing context handling the VertX data
      */
@@ -444,8 +453,8 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void sendSMS(RoutingContext rc) {
         BadIMSILogger.getLogger().log(Level.INFO, "Sending new SMS to Mobile station");
-        if (timsiThreadManager != null) {
-            timsiThreadManager.stop();
+        if (tmsiThreadManager != null) {
+            tmsiThreadManager.stop();
         }
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
@@ -485,7 +494,7 @@ public class BadIMSIService extends AbstractVerticle {
                     BadIMSILogger.getLogger().log(Level.SEVERE, "Sending SMS failed", res.cause());
                     answer.put("error", res.cause().getMessage());
                 }
-                
+
                 rc.response().putHeader("content-type", "application/json").end(
                         answer.encode()
                 );
@@ -507,7 +516,7 @@ public class BadIMSIService extends AbstractVerticle {
         command.add("/var/log/syslog");
         System.out.println("Launching SMS receptor...");
 
-        smsThreadManager = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
+        smsThreadManager = SynchronousThreadManager.createSynchronousThread(command.stream().toArray(String[]::new), "SMS Receptor", 5000, 5);
         vertx.executeBlocking(future -> {
             smsThreadManager.start((in, out) -> {
                 BadIMSILogger.getLogger().log(Level.INFO, "Extracting SMS");
@@ -538,10 +547,9 @@ public class BadIMSIService extends AbstractVerticle {
         command.clear();
 
         command.add("badimsicore_tmsis");
-        timsiThreadManager
-                = new SynchronousThreadManager(command.stream().toArray(String[]::new), 5000);
+        tmsiThreadManager = SynchronousThreadManager.createSynchronousThread(command.stream().toArray(String[]::new), "TMSI Receptor", 5000, 5);
         vertx.executeBlocking(future -> {
-            timsiThreadManager.start((in, out) -> {
+            tmsiThreadManager.start((in, out) -> {
                 targetList.clear();
                 BufferedReader bf = new BufferedReader(new InputStreamReader(in));
                 bf.lines().skip(2).filter(line -> !line.equals("None")).forEach(line -> {

@@ -3,7 +3,6 @@ package org.imsi.badimsibox.badimsiserver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Objects;
 import java.util.logging.Level;
 
 /**
@@ -18,20 +17,57 @@ public class SynchronousThreadManager {
 
     private final String[] command;
     private final int refreshTime;
+    private final String name;
+    private final int maximumNumberOfFail;
 
     private Thread thread = null;
     private Exception error = null;
 
     /**
      * Contruct a new SynchronousThreadManager to execute a specified command
-     * periodically each timeToSleep millisecond
+     * periodically each timeToSleep millisecond. A name is needed to identify
+     * the thread in logs in case of error. A maximum number of successive
+     * process fail before stopping the thread is also needed to avoid infinite
+     * error loop
      *
      * @param command : the array of String which represent a command to execute
+     * @param name : The name to identify the thread in logs
      * @param refreshTime : the time between two execution
+     * @param maximumNumberOfFail : Maximum number of successive error before
+     * automatic stop
      */
-    public SynchronousThreadManager(String[] command, int refreshTime) {
-        this.command = Objects.requireNonNull(command);
+    private SynchronousThreadManager(String[] command, String name, int refreshTime, int maximumNumberOfFail) {
+        this.name = name;
+        this.command = command;
         this.refreshTime = refreshTime;
+        this.maximumNumberOfFail = maximumNumberOfFail;
+    }
+
+    /**
+     * Contruct a new SynchronousThreadManager to execute a specified command
+     * periodically each timeToSleep millisecond. A name is needed to identify
+     * the thread in logs in case of error. A maximum number of successive
+     * process fail before stopping the thread is also needed to avoid infinite
+     * error loop
+     *
+     * @param command : the array of String which represent a command to execute
+     * @param name : The name to identify the thread in logs
+     * @param refreshTime : the time between two execution
+     * @param maximumNumberOfFail : Maximum number of successive error before
+     * automatic stop
+     * @return the created Synchronous Thread Manager
+     */
+    public static SynchronousThreadManager createSynchronousThread(String[] command, String name, int refreshTime, int maximumNumberOfFail) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Empty name not accepted");
+        }
+        if (refreshTime <= 0 || maximumNumberOfFail <= 0) {
+            throw new IllegalArgumentException("Negative refresh time detected");
+        }
+        if (command == null || command.length < 1) {
+            throw new IllegalArgumentException("No command to execute founded");
+        }
+        return new SynchronousThreadManager(command, name, refreshTime, maximumNumberOfFail);
     }
 
     /**
@@ -44,20 +80,20 @@ public class SynchronousThreadManager {
      */
     public void start(PythonOperation operation) {
         if (thread != null) {
+            // Already started
             return;
         }
 
         thread = new Thread(() -> {
             PythonManager manager = new PythonManager();
+            int numberOfFail = 0;
             while (true) {
-                if (Thread.interrupted()) {
-                    return;
-                }
                 try {
                     Process p = manager.run(command);
                     p.waitFor();
                     if (p.exitValue() == 0) {
-                        BadIMSILogger.getLogger().log(Level.FINE, "Prcoess ended correctly, starting treatment");
+                        numberOfFail = 0;
+                        BadIMSILogger.getLogger().log(Level.FINE, "Prcoess ended correctly, starting treatment in thread " + name);
                         operation.accept(p.getInputStream(), p.getOutputStream());
                     } else {
                         BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
@@ -65,15 +101,22 @@ public class SynchronousThreadManager {
                         br.lines().forEach(line -> {
                             str.append(line);
                         });
-                        BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly, trying again", new Exception(str.toString()));
+                        numberOfFail++;
+                        BadIMSILogger.getLogger().log(Level.SEVERE, "Process stopped unexpectedly in thread" + name + ", trying again", new Exception(str.toString()));
                     }
                     Thread.sleep(refreshTime);
-                } catch (IOException | InterruptedException ex) {
-                    BadIMSILogger.getLogger().log(Level.SEVERE, "Critical error while executing process treatment", ex);
-                    Thread.currentThread().interrupt();
+                } catch (IOException ex) {
+                    BadIMSILogger.getLogger().log(Level.SEVERE, "Critical error while executing process treatment in thread " + name, ex);
                     synchronized (lock) {
                         error = ex;
                     }
+                    if (numberOfFail > maximumNumberOfFail) {
+                        // Stopping thread
+                        Thread.currentThread().interrupt();
+                    }
+                } catch (InterruptedException ex) {
+                    BadIMSILogger.getLogger().log(Level.SEVERE, "Synchronous thread " + name + " stopped", ex);
+                    return;
                 }
             }
         });
@@ -86,8 +129,8 @@ public class SynchronousThreadManager {
      * flag before each Python execution process.
      */
     public void stop() {
-        if (!thread.isInterrupted()) {
-            BadIMSILogger.getLogger().log(Level.FINE, "Stopping synchronous thread by order");
+        if (thread != null || !thread.isInterrupted()) {
+            BadIMSILogger.getLogger().log(Level.FINE, "Order to stop thread " + name + " executed");
             thread.interrupt();
         }
     }
@@ -98,6 +141,9 @@ public class SynchronousThreadManager {
      * @return True if the thread is running else return False
      */
     public boolean status() {
+        if (thread == null) {
+            return false;
+        }
         return thread.isInterrupted();
     }
 
