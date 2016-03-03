@@ -18,4 +18,14 @@ To install BadIMSIServer, just simply clone the git repository.
 git clone https://github.com/WarenUT/BadIMSIServer
 ```
 
-BadIMSIServer has a jar file that we need to launch to communicate with the web part. 
+After cloning the repository, we need to import it into an IDE like Eclipse or Netbeans and build the source to generate the jar files. 
+
+BadIMSIServer has a jar file that we need to launch to communicate with the web part located in ~/BadIMSIServer/target/
+
+You only need to launch the jar with all dependencies : 
+```
+cd ~/BadIMSIServer/target/
+sudo java -jar BadIMSIServer-1.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+We can go on.
