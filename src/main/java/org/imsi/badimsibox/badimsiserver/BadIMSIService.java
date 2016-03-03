@@ -152,14 +152,8 @@ public class BadIMSIService extends AbstractVerticle {
     private void destroySession(RoutingContext rc) {
         BadIMSILogger.getLogger().log(Level.INFO, "Trying to destroy the current session");
         currentSession = Session.init(vertx);
-        if (smsThreadManager != null) {
-            smsThreadManager.stop();
-            BadIMSILogger.getLogger().log(Level.FINE, "Stopping SMS Manager");
-        }
-        if (tmsiThreadManager != null) {
-            tmsiThreadManager.stop();
-            BadIMSILogger.getLogger().log(Level.FINE, "Stopping TMSI Manager");
-        }
+        stopSmsThread();
+        stopTmsiThread();
     }
 
     /**
@@ -206,9 +200,7 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void startSniffing(RoutingContext rc) {
         BadIMSILogger.getLogger().log(Level.INFO, "Starting sniffing process");
-        if (smsThreadManager != null) {
-            smsThreadManager.stop();
-        }
+        stopSmsThread();
 
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
@@ -440,6 +432,8 @@ public class BadIMSIService extends AbstractVerticle {
             } else {
                 BadIMSILogger.getLogger().log(Level.FINE, "Stopping OpenBTS service with success");
             }
+            stopSmsThread();
+            stopTmsiThread();
             rc.response().putHeader("content-type", "application/json").end(
                     answer.encode()
             );
@@ -453,9 +447,7 @@ public class BadIMSIService extends AbstractVerticle {
      */
     private void sendSMS(RoutingContext rc) {
         BadIMSILogger.getLogger().log(Level.INFO, "Sending new SMS to Mobile station");
-        if (tmsiThreadManager != null) {
-            tmsiThreadManager.stop();
-        }
+        stopTmsiThread();
         rc.request().bodyHandler(h -> {
             JsonObject reqJson = formatJsonParams(h);
 
@@ -683,5 +675,25 @@ public class BadIMSIService extends AbstractVerticle {
     private void signalObserverForStartingLongTreatment() {
         JsonObject json = new JsonObject().put("started", true);
         this.vertx.eventBus().publish("observer.new", json.encode());
+    }
+
+    /**
+     * Used to stop the SMS Thread if running
+     */
+    private void stopSmsThread() {
+        if (smsThreadManager != null) {
+            smsThreadManager.stop();
+            BadIMSILogger.getLogger().log(Level.FINE, "Stopping SMS Manager");
+        }
+    }
+
+    /**
+     * Used to stop the TMSI Thread if running
+     */
+    private void stopTmsiThread() {
+        if (tmsiThreadManager != null) {
+            tmsiThreadManager.stop();
+            BadIMSILogger.getLogger().log(Level.FINE, "Stopping TMSI Manager");
+        }
     }
 }
