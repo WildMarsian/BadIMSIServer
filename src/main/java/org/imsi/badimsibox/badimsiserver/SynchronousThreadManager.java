@@ -130,7 +130,7 @@ public class SynchronousThreadManager {
      * flag before each Python execution process.
      */
     public void stop() {
-        if (thread != null || !thread.isInterrupted()) {
+        if (thread != null) {
             BadIMSILogger.getLogger().log(Level.FINE, "Order to stop thread " + name + " executed");
             thread.interrupt();
         }
