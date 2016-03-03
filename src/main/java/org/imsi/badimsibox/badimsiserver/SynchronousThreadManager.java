@@ -87,7 +87,7 @@ public class SynchronousThreadManager {
         thread = new Thread(() -> {
             PythonManager manager = new PythonManager();
             int numberOfFail = 0;
-            while (true) {
+            while (!Thread.interrupted()) {
                 try {
                     Process p = manager.run(command);
                     p.waitFor();
